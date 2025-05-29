@@ -1,4 +1,27 @@
 defmodule Hydra.Spec.Parameter do
+  @moduledoc """
+  Represents a parameter in the Hydra specification.
+  A parameter is a piece of data that can be passed to an API endpoint.
+  It includes details such as the parameter name, location (in, path, query, header, cookie),
+  description, schema, content, style, and whether it is required or deprecated.
+  """
+
+  @type t() :: %__MODULE__{
+          name: String.t(),
+          internal_name: String.t(),
+          description: String.t() | nil,
+          in: String.t(),
+          schema: map() | nil,
+          content: map() | nil,
+          style: String.t() | nil,
+          deprecated: boolean(),
+          explode: boolean(),
+          allow_reserved: boolean(),
+          allow_empty_value: boolean(),
+          required: boolean(),
+          examples: list()
+        }
+
   defstruct [
     :name,
     :internal_name,
@@ -15,6 +38,11 @@ defmodule Hydra.Spec.Parameter do
     examples: []
   ]
 
+  @doc """
+  Parses a parameter from the OpenAPI 3.0 specification.
+  This function takes a parameter map and returns a `Hydra.Spec.Parameter` struct.
+  """
+  @spec parse(map()) :: t()
   def parse(parameter) do
     %__MODULE__{
       name: parameter["name"],
@@ -42,42 +70,7 @@ defmodule Hydra.Spec.Parameter do
     |> escape_parameter_name()
   end
 
-  @doc """
-  Escape parameter names that are reserved words in Elixir.
-
-  ## Reserved words:
-  - `__CALLER__`
-  - `__DIR__`
-  - `__ENV__`
-  - `__FILE__`
-  - `__MODULE__`
-  - `__struct__`
-  - `after`
-  - `and`
-  - `catch`
-  - `do`
-  - `else`
-  - `end`
-  - `false`
-  - `fn`
-  - `in`
-  - `nil`
-  - `not`
-  - `or`
-  - `rescue`
-  - `true`
-  - `when`
-
-  ## Example:
-
-      iex> Hydra.Spec.Path.escape_parameter_name("id")
-      "id"
-
-      iex> Hydra.Spec.Path.escape_parameter_name("do")
-      "do_"
-
-  """
-  def escape_parameter_name(name) when is_binary(name) do
+  defp escape_parameter_name(name) when is_binary(name) do
     reserved_words = [
       "__CALLER__",
       "__DIR__",

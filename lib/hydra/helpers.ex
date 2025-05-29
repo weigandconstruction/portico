@@ -1,4 +1,19 @@
 defmodule Hydra.Helpers do
+  @moduledoc """
+  A collection of helper functions for working with paths and operations in Hydra.
+  """
+
+  @doc """
+  Converts a path string into a more human-readable format by replacing
+  certain characters with underscores and removing braces. This is useful for
+  generating friendly names for paths that can be used in filename creation.
+
+  ## Example:
+
+      iex> Hydra.Helpers.friendly_name("/rest/v1.0/bim_files/{id}")
+      "rest_v1_0_bim_files_id"
+
+  """
   @spec friendly_name(String.t()) :: String.t()
   def friendly_name(path) when is_binary(path) do
     path
@@ -10,6 +25,17 @@ defmodule Hydra.Helpers do
     |> String.trim_trailing("_")
   end
 
+  @doc """
+  Converts a path string into a module name by transforming it into CamelCase.
+  This is useful for generating module names from paths, ensuring that the
+  resulting name is valid in Elixir.
+
+  ## Example:
+
+      iex> Hydra.Helpers.module_name("/rest/v1.0/bim_files/{id}")
+      "RestV10BimFilesId"
+
+  """
   @spec module_name(String.t()) :: String.t()
   def module_name(path) do
     path

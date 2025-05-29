@@ -26,3 +26,5 @@ hydra-*.tar
 config.exs
 procore
 *.json
+
+.elixir_ls
