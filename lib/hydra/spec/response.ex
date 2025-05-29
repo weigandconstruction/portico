@@ -1,4 +1,4 @@
-defmodule Hydra.Response do
+defmodule Hydra.Spec.Response do
   defstruct [
     :type,
     :description,

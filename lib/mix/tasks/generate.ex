@@ -43,13 +43,13 @@ defmodule Mix.Tasks.Hydra.Generate do
   end
 
   defp generate_api_module(path, opts) do
-    name = Hydra.Path.friendly_name(path)
-    module_name = Hydra.Path.module_name(path)
+    name = Hydra.Helpers.friendly_name(path.path)
+    module_name = Hydra.Helpers.module_name(path.path)
 
     opts =
       opts
       |> Keyword.put(:local_module, module_name)
-      |> Keyword.put(:operations, path.operations)
+      |> Keyword.put(:path, path)
 
     source_path = Path.join(:code.priv_dir(:hydra), "templates/api.ex.eex")
 

@@ -1,4 +1,4 @@
-defmodule Hydra.Operation do
+defmodule Hydra.Spec.Operation do
   defstruct [
     :id,
     :method,
@@ -20,8 +20,8 @@ defmodule Hydra.Operation do
       summary: operation["summary"],
       description: operation["description"],
       tags: operation["tags"] || [],
-      parameters: Enum.map(parameters, &Hydra.Parameter.parse/1),
-      responses: Enum.map(responses, &Hydra.Response.parse/1)
+      parameters: Enum.map(parameters, &Hydra.Spec.Parameter.parse/1),
+      responses: Enum.map(responses, &Hydra.Spec.Response.parse/1)
     }
   end
 end
