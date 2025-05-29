@@ -1,0 +1,21 @@
+defmodule <%= @module %>.Client do
+  def new(options \\ []) when is_list(options) do
+    base_url =
+      Application.get_env(:hydra, <%= @module %>)[:base_url] ||
+        raise "Set :base_url in config for <%= @module %>"
+
+    auth = Application.get_env(:hydra, <%= @module %>)[:auth] || raise "Set :auth in config for <%= @module %>"
+
+    Req.new(
+      base_url: base_url,
+      auth: auth
+    )
+    |> Req.merge(options)
+  end
+
+  def request(options \\ []) do
+    options
+    |> new()
+    |> Req.request!()
+  end
+end

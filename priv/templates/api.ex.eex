@@ -1,0 +1,14 @@
+defmodule <%= @module %>.<%= @local_module %> do
+  @moduledoc """
+  API for <%= @local_module %>
+  """
+
+  def example(procore_company_id, id, company_id) do
+    Procore.Client.request(
+      method: :get,
+      url: "/rest/v1.0/projects/#{id}",
+      headers: [{"Procore-Company-Id", procore_company_id}],
+      params: [company_id: company_id]
+    )
+  end
+end
