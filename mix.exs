@@ -21,7 +21,8 @@ defmodule Hydra.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:req, "~> 0.5"}
+      {:req, "~> 0.5"},
+      {:briefly, "~> 0.3", only: :test}
     ]
   end
 end

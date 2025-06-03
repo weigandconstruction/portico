@@ -1,13 +1,13 @@
 defmodule Hydra.Spec.PathTest do
   use ExUnit.Case, async: true
 
-  alias Hydra.Spec.Path
+  alias Hydra.Spec.Path, as: SpecPath
 
   describe "parse/1" do
     test "parses a simple path with no operations" do
       input = {"/users", %{}}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert path.path == "/users"
       assert path.operations == []
@@ -24,7 +24,7 @@ defmodule Hydra.Spec.PathTest do
            }
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert path.path == "/users"
       assert length(path.operations) == 1
@@ -54,7 +54,7 @@ defmodule Hydra.Spec.PathTest do
            }
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert path.path == "/users"
       assert length(path.operations) == 4
@@ -80,7 +80,7 @@ defmodule Hydra.Spec.PathTest do
            "trace" => %{"summary" => "TRACE"}
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert length(path.operations) == 8
       methods = Enum.map(path.operations, & &1.method)
@@ -97,7 +97,7 @@ defmodule Hydra.Spec.PathTest do
            "post" => %{"summary" => "Valid POST"}
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert length(path.operations) == 2
       methods = Enum.map(path.operations, & &1.method)
@@ -130,7 +130,7 @@ defmodule Hydra.Spec.PathTest do
            }
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert path.path == "/users/{id}"
       assert length(path.parameters) == 2
@@ -157,7 +157,7 @@ defmodule Hydra.Spec.PathTest do
            "get" => %{"summary" => "Get users"}
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert path.path == "/users"
       assert path.parameters == []
@@ -171,7 +171,7 @@ defmodule Hydra.Spec.PathTest do
            "get" => %{"summary" => "Get users"}
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert path.path == "/users"
       assert path.parameters == []
@@ -213,7 +213,7 @@ defmodule Hydra.Spec.PathTest do
            }
          }}
 
-      path = Path.parse(input)
+      path = SpecPath.parse(input)
 
       assert path.path == "/projects/{project_id}/tasks/{task_id}"
       assert length(path.parameters) == 1
