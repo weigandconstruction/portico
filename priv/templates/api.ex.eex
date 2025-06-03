@@ -5,12 +5,20 @@ defmodule <%= @module %>.<%= @local_module %> do
 
   <%= for operation <- @path.operations do %>
     @doc """
-    <%= operation.description %><%= if Hydra.Helpers.has_request_body?(operation) do %>
+    <%= operation.description %><%= if !Enum.empty?(Hydra.Helpers.all_parameters_for_docs(@path, operation)) do %>
 
-    ## Body Parameters
+    ## Parameters
 
-<%= Hydra.Helpers.request_body_parameters(operation) |> Enum.map(fn body_param -> "    * `#{body_param.name}` - `#{body_param.type}`#{if body_param.required, do: " (required)", else: " (optional)"}#{if body_param.description, do: " - #{body_param.description}", else: ""}" end) |> Enum.join("\n") %>
-  <% end %>
+<%= Hydra.Helpers.all_parameters_for_docs(@path, operation) |> Enum.map(fn param -> 
+  main_param = "    * `#{param.name}` - `#{param.type}`#{if param.required, do: " (required)", else: " (optional)"}#{if param.description, do: " - #{param.description}", else: ""}"
+  nested = if Map.has_key?(param, :nested_params) && param.nested_params do
+    param.nested_params |> Enum.map(fn nested_param -> "      * `#{nested_param.name}` - `#{nested_param.type}`#{if nested_param.required, do: " (required)", else: " (optional)"}#{if nested_param.description, do: " - #{nested_param.description}", else: ""}" end) |> Enum.join("\n")
+  else
+    ""
+  end
+  if nested != "", do: main_param <> "\n" <> nested, else: main_param
+end) |> Enum.join("\n") %>
+<% end %>
     """
     def <%= operation.method %>(<%= [Hydra.Helpers.function_parameters(@path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
       Procore.Client.request(
