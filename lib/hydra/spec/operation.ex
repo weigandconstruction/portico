@@ -14,7 +14,8 @@ defmodule Hydra.Spec.Operation do
           tags: [String.t()],
           parameters: [Hydra.Spec.Parameter.t()],
           responses: %{String.t() => Hydra.Spec.Response.t()},
-          security: map()
+          security: map(),
+          request_body: map() | nil
         }
 
   defstruct [
@@ -25,7 +26,8 @@ defmodule Hydra.Spec.Operation do
     tags: [],
     parameters: [],
     responses: %{},
-    security: %{}
+    security: %{},
+    request_body: nil
   ]
 
   @doc """
@@ -47,7 +49,8 @@ defmodule Hydra.Spec.Operation do
         Map.new(responses, fn {status_code, response} ->
           {status_code, Hydra.Spec.Response.parse(response)}
         end),
-      security: operation["security"] || %{}
+      security: operation["security"] || %{},
+      request_body: operation["requestBody"]
     }
   end
 end

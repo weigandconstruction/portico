@@ -50,7 +50,7 @@ defmodule Hydra.Helpers do
   ## Example:
 
       iex> Hydra.Helpers.interpolated_path("/rest/v1.0/bim_files/{id}")
-      "/rest/v1.0/bim_files/\#{id}"
+      "/rest/v1.0/bim_files/\\\#{id}"
 
   """
   @spec interpolated_path(String.t()) :: String.t()
@@ -82,5 +82,52 @@ defmodule Hydra.Helpers do
   def cookie_parameters(%Hydra.Spec.Path{} = path, %Hydra.Spec.Operation{} = operation) do
     function_parameters(path, operation)
     |> Enum.filter(&(&1.in == "cookie"))
+  end
+
+  @doc """
+  Checks if an operation has a request body defined.
+
+  ## Examples:
+
+      iex> operation = %Hydra.Spec.Operation{request_body: %{"content" => %{}}, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Hydra.Helpers.has_request_body?(operation)
+      true
+
+      iex> operation = %Hydra.Spec.Operation{request_body: nil, method: "get", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Hydra.Helpers.has_request_body?(operation)
+      false
+
+  """
+  @spec has_request_body?(Hydra.Spec.Operation.t()) :: boolean()
+  def has_request_body?(%Hydra.Spec.Operation{} = operation) do
+    !is_nil(operation.request_body)
+  end
+
+  @doc """
+  Extracts the content type from an operation's request body.
+  Returns the first content type found, or nil if no request body is defined.
+
+  ## Examples:
+
+      iex> operation = %Hydra.Spec.Operation{request_body: %{"content" => %{"application/json" => %{}}}, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Hydra.Helpers.request_body_content_type(operation)
+      "application/json"
+
+      iex> operation = %Hydra.Spec.Operation{request_body: nil, method: "get", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Hydra.Helpers.request_body_content_type(operation)
+      nil
+
+  """
+  @spec request_body_content_type(Hydra.Spec.Operation.t()) :: String.t() | nil
+  def request_body_content_type(%Hydra.Spec.Operation{} = operation) do
+    case operation.request_body do
+      %{"content" => content} when is_map(content) ->
+        content
+        |> Map.keys()
+        |> List.first()
+
+      _ ->
+        nil
+    end
   end
 end

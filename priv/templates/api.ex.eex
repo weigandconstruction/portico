@@ -7,7 +7,7 @@ defmodule <%= @module %>.<%= @local_module %> do
     @doc """
     <%= operation.description %>
     """
-    def <%= operation.method %>(<%= Hydra.Helpers.function_parameters(@path, operation) |> Enum.map_join(", ", & &1.internal_name) %>) do
+    def <%= operation.method %>(<%= [Hydra.Helpers.function_parameters(@path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
       Procore.Client.request(
         method: :<%= operation.method %>,
         url: "<%= Hydra.Helpers.interpolated_path(@path.path) %>",
@@ -26,6 +26,10 @@ defmodule <%= @module %>.<%= @local_module %> do
             "<%= param.name %>": <%= param.internal_name %>,
           <% end %>
           ],
+        <% end %>
+
+        <%= if Hydra.Helpers.has_request_body?(operation) do %>
+          json: body,
         <% end %>
       )
     end
