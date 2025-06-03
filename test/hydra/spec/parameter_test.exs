@@ -41,7 +41,7 @@ defmodule Hydra.Spec.ParameterTest do
         "schema" => %{
           "type" => "integer",
           "minimum" => 1,
-          "maximum" => 999999
+          "maximum" => 999_999
         },
         "content" => %{
           "application/json" => %{
@@ -67,7 +67,7 @@ defmodule Hydra.Spec.ParameterTest do
       assert param.explode == true
       assert param.allow_reserved == true
       assert param.allow_empty_value == true
-      assert param.schema == %{"type" => "integer", "minimum" => 1, "maximum" => 999999}
+      assert param.schema == %{"type" => "integer", "minimum" => 1, "maximum" => 999_999}
       assert param.content == %{"application/json" => %{"schema" => %{"type" => "string"}}}
       assert param.examples == %{"example1" => %{"value" => 123}}
     end
@@ -103,7 +103,7 @@ defmodule Hydra.Spec.ParameterTest do
       for {input_name, expected_internal} <- test_cases do
         input = %{"name" => input_name, "in" => "query"}
         param = Parameter.parse(input)
-        
+
         assert param.name == input_name
         assert param.internal_name == expected_internal
       end
@@ -137,7 +137,7 @@ defmodule Hydra.Spec.ParameterTest do
       for {reserved_word, expected_internal} <- test_cases do
         input = %{"name" => reserved_word, "in" => "query"}
         param = Parameter.parse(input)
-        
+
         assert param.name == reserved_word
         assert param.internal_name == expected_internal
       end
@@ -145,14 +145,27 @@ defmodule Hydra.Spec.ParameterTest do
 
     test "does not escape non-reserved words" do
       non_reserved_words = [
-        "user", "id", "name", "email", "password", "token", "api", "version",
-        "limit", "offset", "page", "size", "filter", "sort", "order"
+        "user",
+        "id",
+        "name",
+        "email",
+        "password",
+        "token",
+        "api",
+        "version",
+        "limit",
+        "offset",
+        "page",
+        "size",
+        "filter",
+        "sort",
+        "order"
       ]
 
       for word <- non_reserved_words do
         input = %{"name" => word, "in" => "query"}
         param = Parameter.parse(input)
-        
+
         assert param.name == word
         assert param.internal_name == word
       end
@@ -164,7 +177,7 @@ defmodule Hydra.Spec.ParameterTest do
       for location <- locations do
         input = %{"name" => "test", "in" => location}
         param = Parameter.parse(input)
-        
+
         assert param.in == location
       end
     end
@@ -222,7 +235,7 @@ defmodule Hydra.Spec.ParameterTest do
           "value" => "hello"
         },
         "complex" => %{
-          "summary" => "A complex example", 
+          "summary" => "A complex example",
           "value" => %{
             "key1" => "value1",
             "key2" => 42

@@ -15,12 +15,14 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "parses a path with a single GET operation" do
-      input = {"/users", %{
-        "get" => %{
-          "summary" => "List users",
-          "description" => "Returns a list of users"
-        }
-      }}
+      input =
+        {"/users",
+         %{
+           "get" => %{
+             "summary" => "List users",
+             "description" => "Returns a list of users"
+           }
+         }}
 
       path = Path.parse(input)
 
@@ -35,26 +37,28 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "parses a path with multiple operations" do
-      input = {"/users", %{
-        "get" => %{
-          "summary" => "List users"
-        },
-        "post" => %{
-          "summary" => "Create user"
-        },
-        "put" => %{
-          "summary" => "Update user"
-        },
-        "delete" => %{
-          "summary" => "Delete user"
-        }
-      }}
+      input =
+        {"/users",
+         %{
+           "get" => %{
+             "summary" => "List users"
+           },
+           "post" => %{
+             "summary" => "Create user"
+           },
+           "put" => %{
+             "summary" => "Update user"
+           },
+           "delete" => %{
+             "summary" => "Delete user"
+           }
+         }}
 
       path = Path.parse(input)
 
       assert path.path == "/users"
       assert length(path.operations) == 4
-      
+
       methods = Enum.map(path.operations, & &1.method)
       assert "get" in methods
       assert "post" in methods
@@ -63,16 +67,18 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "parses all valid HTTP methods" do
-      input = {"/test", %{
-        "get" => %{"summary" => "GET"},
-        "post" => %{"summary" => "POST"},
-        "put" => %{"summary" => "PUT"},
-        "delete" => %{"summary" => "DELETE"},
-        "patch" => %{"summary" => "PATCH"},
-        "options" => %{"summary" => "OPTIONS"},
-        "head" => %{"summary" => "HEAD"},
-        "trace" => %{"summary" => "TRACE"}
-      }}
+      input =
+        {"/test",
+         %{
+           "get" => %{"summary" => "GET"},
+           "post" => %{"summary" => "POST"},
+           "put" => %{"summary" => "PUT"},
+           "delete" => %{"summary" => "DELETE"},
+           "patch" => %{"summary" => "PATCH"},
+           "options" => %{"summary" => "OPTIONS"},
+           "head" => %{"summary" => "HEAD"},
+           "trace" => %{"summary" => "TRACE"}
+         }}
 
       path = Path.parse(input)
 
@@ -82,12 +88,14 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "ignores invalid HTTP methods" do
-      input = {"/test", %{
-        "get" => %{"summary" => "Valid GET"},
-        "invalid_method" => %{"summary" => "Invalid"},
-        "custom" => %{"summary" => "Custom"},
-        "post" => %{"summary" => "Valid POST"}
-      }}
+      input =
+        {"/test",
+         %{
+           "get" => %{"summary" => "Valid GET"},
+           "invalid_method" => %{"summary" => "Invalid"},
+           "custom" => %{"summary" => "Custom"},
+           "post" => %{"summary" => "Valid POST"}
+         }}
 
       path = Path.parse(input)
 
@@ -100,25 +108,27 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "parses path-level parameters" do
-      input = {"/users/{id}", %{
-        "parameters" => [
-          %{
-            "name" => "id",
-            "in" => "path",
-            "required" => true,
-            "schema" => %{"type" => "integer"}
-          },
-          %{
-            "name" => "api-version",
-            "in" => "header",
-            "required" => false,
-            "schema" => %{"type" => "string"}
-          }
-        ],
-        "get" => %{
-          "summary" => "Get user"
-        }
-      }}
+      input =
+        {"/users/{id}",
+         %{
+           "parameters" => [
+             %{
+               "name" => "id",
+               "in" => "path",
+               "required" => true,
+               "schema" => %{"type" => "integer"}
+             },
+             %{
+               "name" => "api-version",
+               "in" => "header",
+               "required" => false,
+               "schema" => %{"type" => "string"}
+             }
+           ],
+           "get" => %{
+             "summary" => "Get user"
+           }
+         }}
 
       path = Path.parse(input)
 
@@ -127,12 +137,12 @@ defmodule Hydra.Spec.PathTest do
       assert length(path.operations) == 1
 
       parameters_by_name = Enum.into(path.parameters, %{}, fn param -> {param.name, param} end)
-      
+
       id_param = parameters_by_name["id"]
       assert id_param.name == "id"
       assert id_param.in == "path"
       assert id_param.required == true
-      
+
       version_param = parameters_by_name["api-version"]
       assert version_param.name == "api-version"
       assert version_param.in == "header"
@@ -140,10 +150,12 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "handles empty parameters array" do
-      input = {"/users", %{
-        "parameters" => [],
-        "get" => %{"summary" => "Get users"}
-      }}
+      input =
+        {"/users",
+         %{
+           "parameters" => [],
+           "get" => %{"summary" => "Get users"}
+         }}
 
       path = Path.parse(input)
 
@@ -153,9 +165,11 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "handles missing parameters field" do
-      input = {"/users", %{
-        "get" => %{"summary" => "Get users"}
-      }}
+      input =
+        {"/users",
+         %{
+           "get" => %{"summary" => "Get users"}
+         }}
 
       path = Path.parse(input)
 
@@ -165,37 +179,39 @@ defmodule Hydra.Spec.PathTest do
     end
 
     test "parses complex path with operations and parameters" do
-      input = {"/projects/{project_id}/tasks/{task_id}", %{
-        "parameters" => [
-          %{
-            "name" => "project_id",
-            "in" => "path",
-            "required" => true,
-            "schema" => %{"type" => "string"}
-          }
-        ],
-        "get" => %{
-          "summary" => "Get task",
-          "parameters" => [
-            %{
-              "name" => "task_id",
-              "in" => "path",
-              "required" => true,
-              "schema" => %{"type" => "integer"}
-            }
-          ]
-        },
-        "put" => %{
-          "summary" => "Update task",
-          "requestBody" => %{
-            "content" => %{
-              "application/json" => %{
-                "schema" => %{"$ref" => "#/components/schemas/Task"}
-              }
-            }
-          }
-        }
-      }}
+      input =
+        {"/projects/{project_id}/tasks/{task_id}",
+         %{
+           "parameters" => [
+             %{
+               "name" => "project_id",
+               "in" => "path",
+               "required" => true,
+               "schema" => %{"type" => "string"}
+             }
+           ],
+           "get" => %{
+             "summary" => "Get task",
+             "parameters" => [
+               %{
+                 "name" => "task_id",
+                 "in" => "path",
+                 "required" => true,
+                 "schema" => %{"type" => "integer"}
+               }
+             ]
+           },
+           "put" => %{
+             "summary" => "Update task",
+             "requestBody" => %{
+               "content" => %{
+                 "application/json" => %{
+                   "schema" => %{"$ref" => "#/components/schemas/Task"}
+                 }
+               }
+             }
+           }
+         }}
 
       path = Path.parse(input)
 
@@ -210,11 +226,11 @@ defmodule Hydra.Spec.PathTest do
 
       # Check operations
       operations_by_method = Enum.into(path.operations, %{}, fn op -> {op.method, op} end)
-      
+
       get_op = operations_by_method["get"]
       assert get_op.summary == "Get task"
       assert length(get_op.parameters) == 1
-      
+
       put_op = operations_by_method["put"]
       assert put_op.summary == "Update task"
       assert put_op.request_body != nil

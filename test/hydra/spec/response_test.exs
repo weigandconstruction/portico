@@ -71,19 +71,19 @@ defmodule Hydra.Spec.ResponseTest do
       response = Response.parse(input)
 
       assert response.description == "User created successfully"
-      
+
       # Check headers
       assert Map.has_key?(response.headers, "X-Request-ID")
       assert Map.has_key?(response.headers, "X-Rate-Limit")
       assert response.headers["X-Request-ID"]["description"] == "Unique request identifier"
       assert response.headers["X-Rate-Limit"]["schema"]["type"] == "integer"
-      
+
       # Check content
       assert Map.has_key?(response.content, "application/json")
       assert Map.has_key?(response.content, "application/xml")
       assert response.content["application/json"]["schema"]["$ref"] == "#/components/schemas/User"
       assert Map.has_key?(response.content["application/json"], "examples")
-      
+
       # Check links
       assert Map.has_key?(response.links, "GetUserById")
       assert Map.has_key?(response.links, "UpdateUser")
@@ -155,8 +155,15 @@ defmodule Hydra.Spec.ResponseTest do
       response = Response.parse(input)
 
       assert response.headers == headers
-      assert response.headers["Authorization"]["schema"]["pattern"] == "^Bearer [A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+\\.[A-Za-z0-9-_.+/=]*$"
-      assert response.headers["Cache-Control"]["schema"]["enum"] == ["no-cache", "no-store", "must-revalidate"]
+
+      assert response.headers["Authorization"]["schema"]["pattern"] ==
+               "^Bearer [A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+\\.[A-Za-z0-9-_.+/=]*$"
+
+      assert response.headers["Cache-Control"]["schema"]["enum"] == [
+               "no-cache",
+               "no-store",
+               "must-revalidate"
+             ]
     end
 
     test "preserves complex content with multiple media types" do
