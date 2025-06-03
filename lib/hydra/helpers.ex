@@ -46,6 +46,58 @@ defmodule Hydra.Helpers do
   end
 
   @doc """
+  Converts a tag string into a module name by transforming it into CamelCase.
+  Handles hierarchical tags (separated by / or -) and creates a valid Elixir module name.
+  Removes special characters that are not valid in module names.
+
+  ## Examples:
+
+      iex> Hydra.Helpers.tag_to_module_name("Core/Workflows/workflow-tools")
+      "CoreWorkflowsWorkflowTools"
+
+      iex> Hydra.Helpers.tag_to_module_name("user-management")
+      "UserManagement"
+
+      iex> Hydra.Helpers.tag_to_module_name("Quality & Safety/punch-list")
+      "QualitySafetyPunchList"
+
+  """
+  @spec tag_to_module_name(String.t()) :: String.t()
+  def tag_to_module_name(tag) when is_binary(tag) do
+    tag
+    |> String.replace(~r/[\/\-_&\s]+/, " ")
+    |> String.replace(~r/[^a-zA-Z0-9\s]/, "")
+    |> String.split()
+    |> Enum.map(&Macro.camelize/1)
+    |> Enum.join()
+  end
+
+  @doc """
+  Converts a tag string into a friendly filename by transforming it into snake_case.
+  Similar to tag_to_module_name but for file naming.
+  Removes special characters that are not valid in filenames.
+
+  ## Examples:
+
+      iex> Hydra.Helpers.tag_to_filename("Core/Workflows/workflow-tools")
+      "core_workflows_workflow_tools"
+
+      iex> Hydra.Helpers.tag_to_filename("Quality & Safety/punch-list")
+      "quality_safety_punch_list"
+
+  """
+  @spec tag_to_filename(String.t()) :: String.t()
+  def tag_to_filename(tag) when is_binary(tag) do
+    tag
+    |> String.downcase()
+    |> String.replace(~r/[\/\-_&\s]+/, "_")
+    |> String.replace(~r/[^a-z0-9_]/, "")
+    |> String.replace(~r/_+/, "_")
+    |> String.trim_leading("_")
+    |> String.trim_trailing("_")
+  end
+
+  @doc """
   Interpolates path parameters in a string to use Elixir's string interpolation syntax.
   This is useful for generating function names or paths that include dynamic segments.
 
@@ -201,7 +253,8 @@ defmodule Hydra.Helpers do
     |> Enum.sort_by(& &1.required, :desc)
   end
 
-  defp extract_schema_parameters(%{"type" => "object", "properties" => properties} = schema) when is_map(properties) do
+  defp extract_schema_parameters(%{"type" => "object", "properties" => properties} = schema)
+       when is_map(properties) do
     required_fields = Map.get(schema, "required", [])
 
     properties
@@ -233,47 +286,58 @@ defmodule Hydra.Helpers do
   @spec all_parameters_for_docs(Path.t(), Operation.t()) :: [map()]
   def all_parameters_for_docs(%Path{} = path, %Operation{} = operation) do
     # Get required function parameters
-    required_params = required_parameters(path, operation)
-                     |> Enum.map(&format_parameter_for_docs/1)
+    required_params =
+      required_parameters(path, operation)
+      |> Enum.map(&format_parameter_for_docs/1)
 
     # Add body parameter if present
-    body_param = if has_request_body?(operation) do
-      body_params = request_body_parameters(operation)
-      [%{
-        name: "body",
-        type: "object",
-        description: "Request body parameters",
-        required: true,
-        nested_params: body_params
-      }]
-    else
-      []
-    end
+    body_param =
+      if has_request_body?(operation) do
+        body_params = request_body_parameters(operation)
+
+        [
+          %{
+            name: "body",
+            type: "object",
+            description: "Request body parameters",
+            required: true,
+            nested_params: body_params
+          }
+        ]
+      else
+        []
+      end
 
     # Add opts parameter if there are optional parameters
-    opts_param = if !Enum.empty?(optional_parameters(path, operation)) do
-      optional_params = optional_parameters(path, operation)
-                       |> Enum.map(&format_parameter_for_docs/1)
-      [%{
-        name: "opts",
-        type: "keyword",
-        description: "Optional parameters as keyword list",
-        required: false,
-        nested_params: optional_params
-      }]
-    else
-      []
-    end
+    opts_param =
+      if !Enum.empty?(optional_parameters(path, operation)) do
+        optional_params =
+          optional_parameters(path, operation)
+          |> Enum.map(&format_parameter_for_docs/1)
+
+        [
+          %{
+            name: "opts",
+            type: "keyword",
+            description: "Optional parameters as keyword list",
+            required: false,
+            nested_params: optional_params
+          }
+        ]
+      else
+        []
+      end
 
     # Combine all parameters
     required_params ++ body_param ++ opts_param
   end
 
   defp format_parameter_for_docs(%Parameter{} = param) do
-    type = case param.schema do
-      %{"type" => type} -> type
-      _ -> "string"
-    end
+    type =
+      case param.schema do
+        %{"type" => type} -> type
+        _ -> "string"
+      end
 
     %{
       name: param.internal_name,
@@ -281,5 +345,53 @@ defmodule Hydra.Helpers do
       description: param.description,
       required: param.required
     }
+  end
+
+  @doc """
+  Groups operations by their tags. If an operation has multiple tags, it uses the first tag.
+  If an operation has no tags, it falls back to using the path as the grouping key.
+  Returns a map where keys are tag names and values are lists of {path, operation} tuples.
+
+  ## Examples:
+
+      iex> paths = [%Hydra.Spec.Path{path: "/users", operations: [%Hydra.Spec.Operation{tags: ["user-management"], method: "get"}]}]
+      iex> Hydra.Helpers.group_operations_by_tag(paths) |> Map.keys()
+      ["user-management"]
+
+  """
+  @spec group_operations_by_tag([Path.t()]) :: %{String.t() => [{Path.t(), Operation.t()}]}
+  def group_operations_by_tag(paths) when is_list(paths) do
+    paths
+    |> Enum.flat_map(fn path ->
+      Enum.map(path.operations, fn operation ->
+        tag =
+          case operation.tags do
+            [first_tag | _] -> first_tag
+            # Fallback to path when no tags
+            [] -> path.path
+          end
+
+        {tag, {path, operation}}
+      end)
+    end)
+    |> Enum.group_by(fn {tag, _} -> tag end, fn {_, path_operation} -> path_operation end)
+  end
+
+  @doc """
+  Generates a unique function name for an operation within a tag-based module.
+  Combines the HTTP method with a path-based identifier to avoid naming conflicts.
+
+  ## Examples:
+
+      iex> path = %Hydra.Spec.Path{path: "/rest/v1.0/users/{id}"}
+      iex> operation = %Hydra.Spec.Operation{method: "get"}
+      iex> Hydra.Helpers.function_name_for_operation(path, operation)
+      "get_rest_v1_0_users_id"
+
+  """
+  @spec function_name_for_operation(Path.t(), Operation.t()) :: String.t()
+  def function_name_for_operation(%Path{} = path, %Operation{} = operation) do
+    path_part = friendly_name(path.path)
+    "#{operation.method}_#{path_part}"
   end
 end

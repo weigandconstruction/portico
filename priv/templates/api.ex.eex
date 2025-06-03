@@ -3,13 +3,13 @@ defmodule <%= @module %>.<%= @local_module %> do
   API for <%= @local_module %>
   """
 
-  <%= for operation <- @path.operations do %>
+  <%= for {path, operation} <- @path_operations do %>
     @doc """
-    <%= operation.description %><%= if !Enum.empty?(Hydra.Helpers.all_parameters_for_docs(@path, operation)) do %>
+    <%= operation.description %><%= if !Enum.empty?(Hydra.Helpers.all_parameters_for_docs(path, operation)) do %>
 
     ## Parameters
 
-<%= Hydra.Helpers.all_parameters_for_docs(@path, operation) |> Enum.map(fn param -> 
+<%= Hydra.Helpers.all_parameters_for_docs(path, operation) |> Enum.map(fn param -> 
   main_param = "    * `#{param.name}` - `#{param.type}`#{if param.required, do: " (required)", else: " (optional)"}#{if param.description, do: " - #{param.description}", else: ""}"
   nested = if Map.has_key?(param, :nested_params) && param.nested_params do
     param.nested_params |> Enum.map(fn nested_param -> "      * `#{nested_param.name}` - `#{nested_param.type}`#{if nested_param.required, do: " (required)", else: " (optional)"}#{if nested_param.description, do: " - #{nested_param.description}", else: ""}" end) |> Enum.join("\n")
@@ -20,14 +20,14 @@ defmodule <%= @module %>.<%= @local_module %> do
 end) |> Enum.join("\n") %>
 <% end %>
     """
-    def <%= operation.method %>(<%= [Hydra.Helpers.required_parameters(@path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: []), if(!Enum.empty?(Hydra.Helpers.optional_parameters(@path, operation)), do: ["opts \\\\ []"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
+    def <%= Hydra.Helpers.function_name_for_operation(path, operation) %>(<%= [Hydra.Helpers.required_parameters(path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: []), if(!Enum.empty?(Hydra.Helpers.optional_parameters(path, operation)), do: ["opts \\\\ []"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
       Procore.Client.request(
         method: :<%= operation.method %>,
-        url: "<%= Hydra.Helpers.interpolated_path(@path.path) %>",
+        url: "<%= Hydra.Helpers.interpolated_path(path.path) %>",
 
-        <%= if !Enum.empty?(Hydra.Helpers.header_parameters(@path, operation)) do %>
+        <%= if !Enum.empty?(Hydra.Helpers.header_parameters(path, operation)) do %>
           headers: [
-          <%= for param <-  Hydra.Helpers.header_parameters(@path, operation) do %>
+          <%= for param <-  Hydra.Helpers.header_parameters(path, operation) do %>
             <%= if param.required do %>
             {"<%= param.name %>", <%= param.internal_name %>},
             <% else %>
@@ -37,9 +37,9 @@ end) |> Enum.join("\n") %>
           ],
         <% end %>
 
-        <%= if !Enum.empty?(Hydra.Helpers.query_parameters(@path, operation)) do %>
+        <%= if !Enum.empty?(Hydra.Helpers.query_parameters(path, operation)) do %>
           params: [
-          <%= for param <-  Hydra.Helpers.query_parameters(@path, operation) do %>
+          <%= for param <-  Hydra.Helpers.query_parameters(path, operation) do %>
             <%= if param.required do %>
             "<%= param.name %>": <%= param.internal_name %>,
             <% else %>

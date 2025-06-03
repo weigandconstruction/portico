@@ -37,24 +37,41 @@ defmodule Mix.Tasks.Hydra.Generate do
   end
 
   defp generate_api_modules(spec, opts) do
-    for path <- spec.paths do
-      generate_api_module(path, opts)
+    # Group operations by tags
+    grouped_operations = Hydra.Helpers.group_operations_by_tag(spec.paths)
+
+    for {tag, path_operations} <- grouped_operations do
+      generate_api_module_for_tag(tag, path_operations, opts)
     end
   end
 
-  defp generate_api_module(path, opts) do
-    name = Hydra.Helpers.friendly_name(path.path)
-    module_name = Hydra.Helpers.module_name(path.path)
+  defp generate_api_module_for_tag(tag, path_operations, opts) do
+    # Determine if this is a tag-based module or path-based fallback
+    {filename, module_name} =
+      if String.starts_with?(tag, "/") do
+        # This is a path fallback (no tags were present)
+        name = Hydra.Helpers.friendly_name(tag)
+        module_name = Hydra.Helpers.module_name(tag)
+        {name, module_name}
+      else
+        # This is a proper tag
+        filename = Hydra.Helpers.tag_to_filename(tag)
+        module_name = Hydra.Helpers.tag_to_module_name(tag)
+        {filename, module_name}
+      end
 
     opts =
       opts
       |> Keyword.put(:local_module, module_name)
-      |> Keyword.put(:path, path)
+      |> Keyword.put(:tag, tag)
+      |> Keyword.put(:path_operations, path_operations)
 
     source_path = Path.join(:code.priv_dir(:hydra), "templates/api.ex.eex")
 
     if File.exists?(source_path) do
-      copy_template(source_path, "lib/#{opts[:name]}/api/#{name}.ex", opts, format_elixir: true)
+      copy_template(source_path, "lib/#{opts[:name]}/api/#{filename}.ex", opts,
+        format_elixir: true
+      )
     end
   end
 end
