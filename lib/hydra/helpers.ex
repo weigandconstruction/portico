@@ -3,6 +3,8 @@ defmodule Hydra.Helpers do
   A collection of helper functions for working with paths and operations in Hydra.
   """
 
+  alias Hydra.Spec.{Operation, Parameter, Path}
+
   @doc """
   Converts a path string into a more human-readable format by replacing
   certain characters with underscores and removing braces. This is useful for
@@ -59,27 +61,92 @@ defmodule Hydra.Helpers do
     |> String.replace(~r/\{(\w+)\}/, "\#{\\g{1}}")
   end
 
-  def function_parameters(%Hydra.Spec.Path{} = path, %Hydra.Spec.Operation{} = operation) do
+  @doc """
+  Returns all unique parameters for a given path and operation combination.
+  Combines path-level and operation-level parameters, removing duplicates by internal_name.
+
+  ## Examples:
+
+      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Hydra.Helpers.function_parameters(path, operation) |> length()
+      2
+
+  """
+  @spec function_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
+  def function_parameters(%Path{} = path, %Operation{} = operation) do
     (path.parameters ++ operation.parameters)
     |> Enum.uniq_by(& &1.internal_name)
   end
 
-  def query_parameters(%Hydra.Spec.Path{} = path, %Hydra.Spec.Operation{} = operation) do
+  @doc """
+  Returns only the query parameters from a path and operation combination.
+  Filters the combined parameters to only include those with `in: "query"`.
+
+  ## Examples:
+
+      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Hydra.Helpers.query_parameters(path, operation) |> length()
+      1
+
+  """
+  @spec query_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
+  def query_parameters(%Path{} = path, %Operation{} = operation) do
     function_parameters(path, operation)
     |> Enum.filter(&(&1.in == "query"))
   end
 
-  def header_parameters(%Hydra.Spec.Path{} = path, %Hydra.Spec.Operation{} = operation) do
+  @doc """
+  Returns only the header parameters from a path and operation combination.
+  Filters the combined parameters to only include those with `in: "header"`.
+
+  ## Examples:
+
+      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "Authorization", internal_name: "authorization", in: "header", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Hydra.Helpers.header_parameters(path, operation) |> length()
+      1
+
+  """
+  @spec header_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
+  def header_parameters(%Path{} = path, %Operation{} = operation) do
     function_parameters(path, operation)
     |> Enum.filter(&(&1.in == "header"))
   end
 
-  def path_parameters(%Hydra.Spec.Path{} = path, %Hydra.Spec.Operation{} = operation) do
+  @doc """
+  Returns only the path parameters from a path and operation combination.
+  Filters the combined parameters to only include those with `in: "path"`.
+
+  ## Examples:
+
+      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Hydra.Helpers.path_parameters(path, operation) |> length()
+      1
+
+  """
+  @spec path_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
+  def path_parameters(%Path{} = path, %Operation{} = operation) do
     function_parameters(path, operation)
     |> Enum.filter(&(&1.in == "path"))
   end
 
-  def cookie_parameters(%Hydra.Spec.Path{} = path, %Hydra.Spec.Operation{} = operation) do
+  @doc """
+  Returns only the cookie parameters from a path and operation combination.
+  Filters the combined parameters to only include those with `in: "cookie"`.
+
+  ## Examples:
+
+      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "session_id", internal_name: "session_id", in: "cookie", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Hydra.Helpers.cookie_parameters(path, operation) |> length()
+      1
+
+  """
+  @spec cookie_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
+  def cookie_parameters(%Path{} = path, %Operation{} = operation) do
     function_parameters(path, operation)
     |> Enum.filter(&(&1.in == "cookie"))
   end
@@ -98,8 +165,8 @@ defmodule Hydra.Helpers do
       false
 
   """
-  @spec has_request_body?(Hydra.Spec.Operation.t()) :: boolean()
-  def has_request_body?(%Hydra.Spec.Operation{} = operation) do
+  @spec has_request_body?(Operation.t()) :: boolean()
+  def has_request_body?(%Operation{} = operation) do
     !is_nil(operation.request_body)
   end
 
@@ -118,8 +185,8 @@ defmodule Hydra.Helpers do
       nil
 
   """
-  @spec request_body_content_type(Hydra.Spec.Operation.t()) :: String.t() | nil
-  def request_body_content_type(%Hydra.Spec.Operation{} = operation) do
+  @spec request_body_content_type(Operation.t()) :: String.t() | nil
+  def request_body_content_type(%Operation{} = operation) do
     case operation.request_body do
       %{"content" => content} when is_map(content) ->
         content

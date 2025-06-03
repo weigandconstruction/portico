@@ -52,3 +52,8 @@ config :hydra, YourAPI,
   base_url: "https://api.example.com",
   auth: {:bearer, "token"}
 ```
+
+## Workflow Reminders
+
+- Be sure to run `mix format` when done generating all code
+- When done making changes, run tests to confirm everything is working
