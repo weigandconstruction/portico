@@ -14,7 +14,17 @@ defmodule <%= @module %>.Client do
   end
 
   def request(options \\ []) do
-    options
+    # Filter out nil values from headers and params
+    cleaned_options = options
+    |> Enum.map(fn
+      {:headers, headers} when is_list(headers) ->
+        {:headers, Enum.reject(headers, fn {_k, v} -> is_nil(v) end)}
+      {:params, params} when is_list(params) ->
+        {:params, Enum.reject(params, fn {_k, v} -> is_nil(v) end)}
+      other -> other
+    end)
+
+    cleaned_options
     |> new()
     |> Req.request!()
   end

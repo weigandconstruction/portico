@@ -20,7 +20,7 @@ defmodule <%= @module %>.<%= @local_module %> do
 end) |> Enum.join("\n") %>
 <% end %>
     """
-    def <%= operation.method %>(<%= [Hydra.Helpers.function_parameters(@path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
+    def <%= operation.method %>(<%= [Hydra.Helpers.required_parameters(@path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: []), if(!Enum.empty?(Hydra.Helpers.optional_parameters(@path, operation)), do: ["opts \\\\ []"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
       Procore.Client.request(
         method: :<%= operation.method %>,
         url: "<%= Hydra.Helpers.interpolated_path(@path.path) %>",
@@ -28,7 +28,11 @@ end) |> Enum.join("\n") %>
         <%= if !Enum.empty?(Hydra.Helpers.header_parameters(@path, operation)) do %>
           headers: [
           <%= for param <-  Hydra.Helpers.header_parameters(@path, operation) do %>
+            <%= if param.required do %>
             {"<%= param.name %>", <%= param.internal_name %>},
+            <% else %>
+            {"<%= param.name %>", Keyword.get(opts, :<%= param.internal_name %>)},
+            <% end %>
           <% end %>
           ],
         <% end %>
@@ -36,7 +40,11 @@ end) |> Enum.join("\n") %>
         <%= if !Enum.empty?(Hydra.Helpers.query_parameters(@path, operation)) do %>
           params: [
           <%= for param <-  Hydra.Helpers.query_parameters(@path, operation) do %>
+            <%= if param.required do %>
             "<%= param.name %>": <%= param.internal_name %>,
+            <% else %>
+            "<%= param.name %>": Keyword.get(opts, :<%= param.internal_name %>),
+            <% end %>
           <% end %>
           ],
         <% end %>

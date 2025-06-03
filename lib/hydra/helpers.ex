@@ -116,39 +116,39 @@ defmodule Hydra.Helpers do
   end
 
   @doc """
-  Returns only the path parameters from a path and operation combination.
-  Filters the combined parameters to only include those with `in: "path"`.
+  Returns only the required parameters from a path and operation combination.
+  Filters the combined parameters to only include those with `required: true`.
 
   ## Examples:
 
       iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
       iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.path_parameters(path, operation) |> length()
+      iex> Hydra.Helpers.required_parameters(path, operation) |> length()
       1
 
   """
-  @spec path_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
-  def path_parameters(%Path{} = path, %Operation{} = operation) do
+  @spec required_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
+  def required_parameters(%Path{} = path, %Operation{} = operation) do
     function_parameters(path, operation)
-    |> Enum.filter(&(&1.in == "path"))
+    |> Enum.filter(& &1.required)
   end
 
   @doc """
-  Returns only the cookie parameters from a path and operation combination.
-  Filters the combined parameters to only include those with `in: "cookie"`.
+  Returns only the optional parameters from a path and operation combination.
+  Filters the combined parameters to only include those with `required: false`.
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "session_id", internal_name: "session_id", in: "cookie", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
       iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.cookie_parameters(path, operation) |> length()
+      iex> Hydra.Helpers.optional_parameters(path, operation) |> length()
       1
 
   """
-  @spec cookie_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
-  def cookie_parameters(%Path{} = path, %Operation{} = operation) do
+  @spec optional_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
+  def optional_parameters(%Path{} = path, %Operation{} = operation) do
     function_parameters(path, operation)
-    |> Enum.filter(&(&1.in == "cookie"))
+    |> Enum.filter(&(not &1.required))
   end
 
   @doc """
@@ -168,34 +168,6 @@ defmodule Hydra.Helpers do
   @spec has_request_body?(Operation.t()) :: boolean()
   def has_request_body?(%Operation{} = operation) do
     !is_nil(operation.request_body)
-  end
-
-  @doc """
-  Extracts the content type from an operation's request body.
-  Returns the first content type found, or nil if no request body is defined.
-
-  ## Examples:
-
-      iex> operation = %Hydra.Spec.Operation{request_body: %{"content" => %{"application/json" => %{}}}, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
-      iex> Hydra.Helpers.request_body_content_type(operation)
-      "application/json"
-
-      iex> operation = %Hydra.Spec.Operation{request_body: nil, method: "get", parameters: [], responses: %{}, security: %{}, tags: []}
-      iex> Hydra.Helpers.request_body_content_type(operation)
-      nil
-
-  """
-  @spec request_body_content_type(Operation.t()) :: String.t() | nil
-  def request_body_content_type(%Operation{} = operation) do
-    case operation.request_body do
-      %{"content" => content} when is_map(content) ->
-        content
-        |> Map.keys()
-        |> List.first()
-
-      _ ->
-        nil
-    end
   end
 
   @doc """
@@ -246,49 +218,9 @@ defmodule Hydra.Helpers do
   defp extract_schema_parameters(_), do: []
 
   @doc """
-  Formats query parameters for documentation.
-  Returns a list of parameter documentation strings with name, type, description, and required status.
-  Required parameters are sorted to the top.
-
-  ## Examples:
-
-      iex> path = %Hydra.Spec.Path{parameters: []}
-      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: [], schema: %{"type" => "integer"}, description: "Maximum number of results"}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.query_parameters_for_docs(path, operation) |> length()
-      1
-
-  """
-  @spec query_parameters_for_docs(Path.t(), Operation.t()) :: [map()]
-  def query_parameters_for_docs(%Path{} = path, %Operation{} = operation) do
-    query_parameters(path, operation)
-    |> Enum.map(&format_parameter_for_docs/1)
-    |> Enum.sort_by(& &1.required, :desc)
-  end
-
-  @doc """
-  Formats header parameters for documentation.
-  Returns a list of parameter documentation strings with name, type, description, and required status.
-  Required parameters are sorted to the top.
-
-  ## Examples:
-
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "Authorization", internal_name: "authorization", in: "header", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: [], schema: %{"type" => "string"}, description: "Bearer token"}]}
-      iex> operation = %Hydra.Spec.Operation{parameters: [], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.header_parameters_for_docs(path, operation) |> length()
-      1
-
-  """
-  @spec header_parameters_for_docs(Path.t(), Operation.t()) :: [map()]
-  def header_parameters_for_docs(%Path{} = path, %Operation{} = operation) do
-    header_parameters(path, operation)
-    |> Enum.map(&format_parameter_for_docs/1)
-    |> Enum.sort_by(& &1.required, :desc)
-  end
-
-  @doc """
   Gets all function parameters formatted for documentation.
   Combines path, query, and header parameters, plus body parameters if present.
-  Required parameters are sorted to the top.
+  Required parameters are sorted to the top, and optional parameters are documented as being passed via opts.
 
   ## Examples:
 
@@ -300,8 +232,8 @@ defmodule Hydra.Helpers do
   """
   @spec all_parameters_for_docs(Path.t(), Operation.t()) :: [map()]
   def all_parameters_for_docs(%Path{} = path, %Operation{} = operation) do
-    # Get all function parameters (path, query, header, cookie)
-    function_params = function_parameters(path, operation)
+    # Get required function parameters
+    required_params = required_parameters(path, operation)
                      |> Enum.map(&format_parameter_for_docs/1)
 
     # Add body parameter if present
@@ -318,9 +250,23 @@ defmodule Hydra.Helpers do
       []
     end
 
-    # Combine and sort by required status
-    (function_params ++ body_param)
-    |> Enum.sort_by(& &1.required, :desc)
+    # Add opts parameter if there are optional parameters
+    opts_param = if !Enum.empty?(optional_parameters(path, operation)) do
+      optional_params = optional_parameters(path, operation)
+                       |> Enum.map(&format_parameter_for_docs/1)
+      [%{
+        name: "opts",
+        type: "keyword",
+        description: "Optional parameters as keyword list",
+        required: false,
+        nested_params: optional_params
+      }]
+    else
+      []
+    end
+
+    # Combine all parameters
+    required_params ++ body_param ++ opts_param
   end
 
   defp format_parameter_for_docs(%Parameter{} = param) do
