@@ -5,7 +5,12 @@ defmodule <%= @module %>.<%= @local_module %> do
 
   <%= for operation <- @path.operations do %>
     @doc """
-    <%= operation.description %>
+    <%= operation.description %><%= if Hydra.Helpers.has_request_body?(operation) do %>
+
+    ## Body Parameters
+
+<%= Hydra.Helpers.request_body_parameters(operation) |> Enum.map(fn body_param -> "    * `#{body_param.name}` - `#{body_param.type}`#{if body_param.required, do: " (required)", else: " (optional)"}#{if body_param.description, do: " - #{body_param.description}", else: ""}" end) |> Enum.join("\n") %>
+  <% end %>
     """
     def <%= operation.method %>(<%= [Hydra.Helpers.function_parameters(@path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
       Procore.Client.request(

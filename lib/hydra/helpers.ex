@@ -197,4 +197,51 @@ defmodule Hydra.Helpers do
         nil
     end
   end
+
+  @doc """
+  Extracts body parameters from an operation's request body schema.
+  Returns a list of parameter maps with name, type, description, and required status.
+  Required parameters are sorted to the top.
+
+  ## Examples:
+
+      iex> request_body = %{"content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"name" => %{"type" => "string", "description" => "User name"}, "age" => %{"type" => "integer"}}, "required" => ["name"]}}}}
+      iex> operation = %Hydra.Spec.Operation{request_body: request_body, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Hydra.Helpers.request_body_parameters(operation) |> length()
+      2
+
+  """
+  @spec request_body_parameters(Operation.t()) :: [map()]
+  def request_body_parameters(%Operation{} = operation) do
+    case operation.request_body do
+      %{"content" => content} when is_map(content) ->
+        content
+        |> Map.values()
+        |> List.first()
+        |> case do
+          %{"schema" => schema} -> extract_schema_parameters(schema)
+          _ -> []
+        end
+
+      _ ->
+        []
+    end
+    |> Enum.sort_by(& &1.required, :desc)
+  end
+
+  defp extract_schema_parameters(%{"type" => "object", "properties" => properties} = schema) when is_map(properties) do
+    required_fields = Map.get(schema, "required", [])
+
+    properties
+    |> Enum.map(fn {name, prop} ->
+      %{
+        name: name,
+        type: Map.get(prop, "type", "unknown"),
+        description: Map.get(prop, "description"),
+        required: name in required_fields
+      }
+    end)
+  end
+
+  defp extract_schema_parameters(_), do: []
 end
