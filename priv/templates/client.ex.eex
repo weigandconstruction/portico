@@ -3,6 +3,35 @@ defmodule <%= @module %>.Client do
   HTTP client for <%= @module %> API.
   """
 
+  defmodule HTTPError do
+    @moduledoc """
+    Represents an HTTP error response (4xx/5xx status codes).
+    """
+    defexception [:status, :body, :message]
+
+    def exception({status, body}) do
+      %__MODULE__{
+        status: status,
+        body: body,
+        message: "HTTP #{status} error"
+      }
+    end
+  end
+
+  defmodule TransportError do
+    @moduledoc """
+    Represents a transport-level error (network, timeout, DNS, etc.).
+    """
+    defexception [:reason, :message]
+
+    def exception(reason) do
+      %__MODULE__{
+        reason: reason,
+        message: "Transport error: #{inspect(reason)}"
+      }
+    end
+  end
+
   @doc """
   Creates a new client with the given base URL and authentication.
 
@@ -28,17 +57,18 @@ defmodule <%= @module %>.Client do
   @doc """
   Makes an HTTP request using the provided client.
 
-  Returns `{:ok, response}` on success or `{:error, exception}` on failure.
+  Returns `{:ok, body}` on success (2xx status codes) or `{:error, exception}` on failure.
 
   ## Examples
 
       # GET request
-      {:ok, response} = <%= @module %>.Client.request(client, method: :get, url: "/endpoint")
+      {:ok, data} = <%= @module %>.Client.request(client, method: :get, url: "/endpoint")
 
       # POST request with JSON body
       case <%= @module %>.Client.request(client, method: :post, url: "/endpoint", json: %{key: "value"}) do
-        {:ok, response} -> handle_success(response)
-        {:error, exception} -> handle_error(exception)
+        {:ok, body} -> handle_success(body)
+        {:error, %HTTPError{status: 404}} -> handle_not_found()
+        {:error, %TransportError{}} -> handle_network_error()
       end
 
   """
@@ -46,6 +76,19 @@ defmodule <%= @module %>.Client do
     client
     |> clean_options(options)
     |> Req.request()
+    |> case do
+      {:ok, %{status: status, body: body}} when status in 200..299 ->
+        {:ok, body}
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, HTTPError.exception({status, body})}
+
+      {:error, %Req.TransportError{} = error} ->
+        {:error, TransportError.exception(error)}
+
+      {:error, error} ->
+        {:error, TransportError.exception(error)}
+    end
   end
 
   # Filter out nil values from headers and params
