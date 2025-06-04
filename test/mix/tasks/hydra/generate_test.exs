@@ -89,7 +89,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
     # Create a test spec file
     spec_file = Path.join(temp_dir, "test_spec.json")
-    File.write!(spec_file, JSON.encode!(@test_spec_json))
+    File.write!(spec_file, Jason.encode!(@test_spec_json))
 
     %{temp_dir: temp_dir, spec_file: spec_file}
   end
@@ -246,7 +246,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
       }
 
       spec_file = Path.join(temp_dir, "same_tags.json")
-      File.write!(spec_file, JSON.encode!(spec_with_same_tags))
+      File.write!(spec_file, Jason.encode!(spec_with_same_tags))
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
@@ -286,7 +286,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
       }
 
       spec_file = Path.join(temp_dir, "multi_tags.json")
-      File.write!(spec_file, JSON.encode!(spec_with_multiple_tags))
+      File.write!(spec_file, Jason.encode!(spec_with_multiple_tags))
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
@@ -321,7 +321,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
       }
 
       spec_file = Path.join(temp_dir, "special_tags.json")
-      File.write!(spec_file, JSON.encode!(spec_with_special_tags))
+      File.write!(spec_file, Jason.encode!(spec_with_special_tags))
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
@@ -354,7 +354,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
       }
 
       spec_file = Path.join(temp_dir, "no_tags.json")
-      File.write!(spec_file, JSON.encode!(spec_without_tags))
+      File.write!(spec_file, Jason.encode!(spec_without_tags))
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
@@ -413,7 +413,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
       File.write!(invalid_spec, "{ invalid json }")
 
       File.cd!(temp_dir, fn ->
-        assert_raise JSON.DecodeError, fn ->
+        assert_raise Jason.DecodeError, fn ->
           capture_io(fn ->
             Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", invalid_spec])
           end)

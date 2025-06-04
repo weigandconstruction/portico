@@ -22,6 +22,7 @@ defmodule Hydra.MixProject do
   defp deps do
     [
       {:req, "~> 0.5"},
+      {:jason, "~> 1.4"},
       {:briefly, "~> 0.3", only: :test}
     ]
   end

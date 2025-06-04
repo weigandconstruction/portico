@@ -459,7 +459,7 @@ defmodule Hydra.TemplateRenderingTest do
     }
 
     spec_file = Elixir.Path.join(temp_dir, "test_spec.json")
-    File.write!(spec_file, JSON.encode!(spec_json))
+    File.write!(spec_file, Jason.encode!(spec_json))
 
     # Generate code in temp directory context
     File.cd!(temp_dir, fn ->
