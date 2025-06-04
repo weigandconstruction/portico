@@ -42,13 +42,11 @@ defmodule Hydra do
 
   ## Examples
 
-      # Parse from remote URL
-      iex> spec = Hydra.parse("https://api.example.com/openapi.json")
-      %Hydra.Spec{openapi: "3.0.0", info: %{...}, paths: %{...}}
+      # Parse from remote URL (requires network access)
+      spec = Hydra.parse("https://api.example.com/openapi.json")
 
       # Parse from local file
-      iex> spec = Hydra.parse("./specs/petstore.json")
-      %Hydra.Spec{openapi: "3.0.0", info: %{...}, paths: %{...}}
+      spec = Hydra.parse("./specs/petstore.json")
 
   ## Raises
 
