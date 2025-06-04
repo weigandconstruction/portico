@@ -1,6 +1,6 @@
 # Hydra – Elixir OpenAPI 3.0 Generator
 
-[![CI](https://github.com/natetodd/hydra/actions/workflows/ci.yml/badge.svg)](https://github.com/natetodd/hydra/actions/workflows/ci.yml)
+[![CI](https://github.com/weigandconstruction/hydra/actions/workflows/ci.yml/badge.svg)](https://github.com/weigandconstruction/hydra/actions/workflows/ci.yml)
 
 > ⚠️ **WARNING: DEVELOPMENT VERSION** ⚠️
 >
