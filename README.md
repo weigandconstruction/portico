@@ -23,7 +23,7 @@ Hydra generates minimal API clients directly in your project from OpenAPI specs.
 
 - **Minimal External Dependencies**: Generated code becomes part of your codebase
 - **Complete Control**: Modify, extend, or customize the generated code as needed
-- **Selective Generation**: Generate only the API operations you actually use (coming soon)
+- **Selective Generation**: Generate only the API operations you actually use
 - **Always Up-to-Date**: Easily regenerate your client code when the OpenAPI Spec changes
 
 ## 🚀 Features
@@ -33,7 +33,7 @@ Hydra generates minimal API clients directly in your project from OpenAPI specs.
 - **OpenAPI 3.0 Support**: Parse and generate clients from OpenAPI 3.0 JSON specifications (limited JSON-only support currently,
   but PRs are welcome)
 - **Tag-based Module Organization**: Groups API operations by OpenAPI tags, falling back to path-based grouping
-- **API Filtering**: Generate only the endpoints you need (filtering coming soon)
+- **Operation Filtering**: Generate only the operations you need using OpenAPI tags
 - **Type Documentation**: Generates comprehensive documentation for all parameters and operations
 
 ## 📋 Requirements
@@ -68,12 +68,46 @@ mix deps.get
 
 ## 🎯 Quick Start
 
-### 1. Generate an API Client
+### 1. Discover Available API Operations
+
+First, generate a configuration showing the tags available in your OpenAPI specification:
+
+```bash
+# Generate config with default name (hydra.config.json)
+mix hydra.config --spec https://api.example.com/openapi.json
+
+# Generate config with custom name
+mix hydra.config --spec https://api.example.com/openapi.json --output my-api.config.json
+```
+
+This generates a config file containing all available tags:
+
+```json
+{
+  "tags": ["users", "orders", "products", "authentication"],
+  "spec_info": {
+    "title": "My API",
+    "version": "1.0.0"
+  }
+}
+```
+
+You can curate the list of tags to only those you need. When generating with a config file, Hydra will only generate
+operations that include tags in this list.
+
+### 2. Generate an API Client
 
 Generate client code directly into your project from a remote OpenAPI specification:
 
 ```bash
+# Generate all API operations
 mix hydra.generate --module MyAPI --spec https://api.example.com/openapi.json
+
+# Generate operations for a specific tag
+mix hydra.generate --module MyAPI --spec spec.json --tag users
+
+# Generate all tags present in a config file
+mix hydra.generate --module MyAPI --spec spec.json --config hydra.config.json
 ```
 
 Or from a local file:
@@ -84,7 +118,7 @@ mix hydra.generate --module MyAPI --spec path/to/openapi.json
 
 This creates Elixir modules in your `lib/` directory - the code becomes part of your project.
 
-### 2. Use Your Generated Client
+### 3. Use Your Generated Client
 
 Create a client instance with authentication and make requests:
 

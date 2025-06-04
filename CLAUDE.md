@@ -27,9 +27,17 @@ mix compile
 # Run tests
 mix test
 
+# Generate configuration file from OpenAPI spec
+mix hydra.config --spec https://api.example.com/openapi.json
+mix hydra.config --spec path/to/spec.json --output my-config.json
+
 # Generate API client from OpenAPI spec
 mix hydra.generate --module MyAPI --spec https://api.example.com/openapi.json
 mix hydra.generate --module MyAPI --spec path/to/spec.json
+
+# Generate API client with tag filtering
+mix hydra.generate --module MyAPI --spec spec.json --tag users
+mix hydra.generate --module MyAPI --spec spec.json --config my-config.json
 
 # Run specific test file
 mix test test/hydra_test.exs
