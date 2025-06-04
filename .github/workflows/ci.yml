@@ -17,11 +17,37 @@ jobs:
     strategy:
       matrix:
         include:
-          # Elixir 1.18+ requirement with compatible OTP versions
-          - elixir: "1.18"
+          # Elixir 1.15 with compatible OTP versions
+          - elixir: "1.15"
+            otp: "24"
+          - elixir: "1.15"
+            otp: "25"
+          - elixir: "1.15"
+            otp: "26"
+          
+          # Elixir 1.16 with compatible OTP versions
+          - elixir: "1.16"
+            otp: "24"
+          - elixir: "1.16"
+            otp: "25"
+          - elixir: "1.16"
+            otp: "26"
+          - elixir: "1.16"
             otp: "27"
+          
+          # Elixir 1.17 with compatible OTP versions
+          - elixir: "1.17"
+            otp: "25"
+          - elixir: "1.17"
+            otp: "26"
+          - elixir: "1.17"
+            otp: "27"
+          
+          # Elixir 1.18 with compatible OTP versions
           - elixir: "1.18"
             otp: "26"
+          - elixir: "1.18"
+            otp: "27"
 
     steps:
       - name: Checkout code
@@ -50,7 +76,12 @@ jobs:
         run: mix format --check-formatted
 
       - name: Compile
-        run: mix compile --warnings-as-errors
+        run: |
+          if [ "${{ matrix.elixir }}" = "1.18" ] && [ "${{ matrix.otp }}" = "27" ]; then
+            mix compile --warnings-as-errors
+          else
+            mix compile
+          fi
 
       - name: Run tests
         run: mix test

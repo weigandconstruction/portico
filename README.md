@@ -1,5 +1,7 @@
 # Hydra – Elixir OpenAPI 3.0 Generator
 
+[![CI](https://github.com/natetodd/hydra/actions/workflows/ci.yml/badge.svg)](https://github.com/natetodd/hydra/actions/workflows/ci.yml)
+
 > ⚠️ **WARNING: DEVELOPMENT VERSION** ⚠️
 >
 > This project is currently in very early development and **NOT READY FOR PRODUCTION USE**.
@@ -37,8 +39,15 @@ Hydra generates lean, focused API clients directly in your project from OpenAPI 
 
 ## 📋 Requirements
 
-- Elixir 1.18 or later (will eventually relax this)
+- Elixir 1.15 or later
 - OpenAPI 3.0 specification in JSON format (incomplete support at this time)
+
+### Supported Versions
+
+Hydra is continuously tested against:
+
+- **Elixir**: 1.15, 1.16, 1.17, 1.18
+- **OTP**: 24, 25, 26, 27 (compatible combinations)
 
 ## 🛠 Installation
 
@@ -126,7 +135,13 @@ All functions take a client as the first parameter and return tuples:
 # Function signature with client parameter
 def get_user(client, user_id, opts \\ [])
 
-# Example usage  
+# Example usage with pattern matching
+case MyAPI.Users.get_user(client, "user123") do
+  {:ok, response} -> handle_success(response)
+  {:error, exception} -> handle_error(exception)
+end
+
+# Or with confident assignment
 {:ok, response} = MyAPI.Users.get_user(client, "user123")
 ```
 
@@ -143,7 +158,7 @@ Returns detailed information about a specific user.
 ## Parameters
 
 - `client` - HTTP client instance (required)
-- `user_id` - `string` (required) - Unique identifier for the user  
+- `user_id` - `string` (required) - Unique identifier for the user
 - `opts` - `keyword` (optional) - Optional parameters as keyword list
   - `fields` - `string` (optional) - Comma-separated list of fields to return
 
