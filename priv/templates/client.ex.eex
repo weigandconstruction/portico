@@ -1,31 +1,68 @@
 defmodule <%= @module %>.Client do
-  def new(options \\ []) when is_list(options) do
-    base_url =
-      Application.get_env(:hydra, <%= @module %>)[:base_url] ||
-        raise "Set :base_url in config for <%= @module %>"
+  @moduledoc """
+  HTTP client for <%= @module %> API.
+  """
 
-    auth = Application.get_env(:hydra, <%= @module %>)[:auth] || raise "Set :auth in config for <%= @module %>"
+  @doc """
+  Creates a new client with the given base URL and authentication.
 
-    Req.new(
-      base_url: base_url,
-      auth: auth
-    )
-    |> Req.merge(options)
+  ## Examples
+
+      # Bearer token
+      client = <%= @module %>.Client.new("https://api.example.com", auth: {:bearer, "your-token"})
+
+      # Basic auth
+      client = <%= @module %>.Client.new("https://api.example.com", auth: {:basic, "user:pass"})
+
+      # With additional options
+      client = <%= @module %>.Client.new(
+        "https://api.example.com",
+        [timeout: 30_000, auth: {:bearer, "token"}]
+      )
+
+  """
+  def new(base_url, options \\ []) when is_binary(base_url) and is_list(options) do
+    Req.new([base_url: base_url] ++ options)
   end
 
-  def request(options \\ []) do
-    # Filter out nil values from headers and params
-    cleaned_options = options
-    |> Enum.map(fn
-      {:headers, headers} when is_list(headers) ->
-        {:headers, Enum.reject(headers, fn {_k, v} -> is_nil(v) end)}
-      {:params, params} when is_list(params) ->
-        {:params, Enum.reject(params, fn {_k, v} -> is_nil(v) end)}
-      other -> other
-    end)
+  @doc """
+  Makes an HTTP request using the provided client.
 
-    cleaned_options
-    |> new()
-    |> Req.request!()
+  Returns `{:ok, response}` on success or `{:error, exception}` on failure.
+
+  ## Examples
+
+      # GET request
+      {:ok, response} = <%= @module %>.Client.request(client, method: :get, url: "/endpoint")
+
+      # POST request with JSON body
+      case <%= @module %>.Client.request(client, method: :post, url: "/endpoint", json: %{key: "value"}) do
+        {:ok, response} -> handle_success(response)
+        {:error, exception} -> handle_error(exception)
+      end
+
+  """
+  def request(client, options \\ []) do
+    client
+    |> clean_options(options)
+    |> Req.request()
+  end
+
+  # Filter out nil values from headers and params
+  defp clean_options(client, options) do
+    cleaned_options =
+      options
+      |> Enum.map(fn
+        {:headers, headers} when is_list(headers) ->
+          {:headers, Enum.reject(headers, fn {_k, v} -> is_nil(v) end)}
+
+        {:params, params} when is_list(params) ->
+          {:params, Enum.reject(params, fn {_k, v} -> is_nil(v) end)}
+
+        other ->
+          other
+      end)
+
+    Req.merge(client, cleaned_options)
   end
 end

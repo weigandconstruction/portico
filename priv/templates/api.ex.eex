@@ -5,10 +5,11 @@ defmodule <%= @module %>.<%= @local_module %> do
 
   <%= for {path, operation} <- @path_operations do %>
     @doc """
-    <%= operation.description %><%= if !Enum.empty?(Hydra.Helpers.all_parameters_for_docs(path, operation)) do %>
+    <%= operation.description %>
 
     ## Parameters
 
+    * `client` - `Req.Request` (required) - HTTP client instance<%= if !Enum.empty?(Hydra.Helpers.all_parameters_for_docs(path, operation)) do %>
 <%= Hydra.Helpers.all_parameters_for_docs(path, operation) |> Enum.map(fn param -> 
   main_param = "    * `#{param.name}` - `#{param.type}`#{if param.required, do: " (required)", else: " (optional)"}#{if param.description, do: " - #{param.description}", else: ""}"
   nested = if Map.has_key?(param, :nested_params) && param.nested_params do
@@ -20,8 +21,8 @@ defmodule <%= @module %>.<%= @local_module %> do
 end) |> Enum.join("\n") %>
 <% end %>
     """
-    def <%= Hydra.Helpers.function_name_for_operation(path, operation) %>(<%= [Hydra.Helpers.required_parameters(path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: []), if(!Enum.empty?(Hydra.Helpers.optional_parameters(path, operation)), do: ["opts \\\\ []"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
-      Procore.Client.request(
+    def <%= Hydra.Helpers.function_name_for_operation(path, operation) %>(<%= ["client", Hydra.Helpers.required_parameters(path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: []), if(!Enum.empty?(Hydra.Helpers.optional_parameters(path, operation)), do: ["opts \\\\ []"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
+      <%= @module %>.Client.request(client,
         method: :<%= operation.method %>,
         url: "<%= Hydra.Helpers.interpolated_path(path.path) %>",
 

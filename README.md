@@ -76,17 +76,24 @@ mix hydra.generate --module MyAPI --spec path/to/openapi.json
 
 This creates Elixir modules in your `lib/` directory - the code becomes part of your project.
 
-### 2. Configure Your Client
+### 2. Use Your Generated Client
 
-Add client configuration to your `config/config.exs`:
+Create a client instance with authentication and make requests:
 
 ```elixir
-config :hydra, MyAPI,
-  base_url: "https://api.example.com",
-  auth: {:bearer, "your-api-token"}
-```
+# Create client with authentication
+client = MyAPI.Client.new("https://api.example.com", auth: {:bearer, "your-token"})
 
-Note: configurable auth is something we're working on.
+# Make API calls (returns {:ok, response} or {:error, exception})
+case MyAPI.Users.get_user(client, "user123") do
+  {:ok, response} -> IO.inspect(response.body)
+  {:error, exception} -> IO.puts("Error: #{exception.message}")
+end
+
+# Different environments
+staging_client = MyAPI.Client.new("https://staging.api.com", auth: {:bearer, "staging-token"})
+prod_client = MyAPI.Client.new("https://api.example.com", auth: {:bearer, "prod-token"})
+```
 
 ## 📁 Generated Code Structure
 
@@ -111,6 +118,18 @@ dependency.
 - **Fallback Naming**: Operations without tags use path-based module names
 - **Unique Function Names**: Function names combine HTTP method with path segments
 
+### Generated API Functions
+
+All functions take a client as the first parameter and return tuples:
+
+```elixir
+# Function signature with client parameter
+def get_user(client, user_id, opts \\ [])
+
+# Example usage  
+{:ok, response} = MyAPI.Users.get_user(client, "user123")
+```
+
 ### Documentation Generation
 
 All generated functions include comprehensive documentation from the OpenAPI spec:
@@ -123,8 +142,10 @@ Returns detailed information about a specific user.
 
 ## Parameters
 
-- `user_id` - `string` (required) - Unique identifier for the user
-- `fields` - `string` (optional) - Comma-separated list of fields to return
+- `client` - HTTP client instance (required)
+- `user_id` - `string` (required) - Unique identifier for the user  
+- `opts` - `keyword` (optional) - Optional parameters as keyword list
+  - `fields` - `string` (optional) - Comma-separated list of fields to return
 
 """
 ```

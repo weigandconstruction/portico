@@ -141,8 +141,8 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
         content = File.read!(user_mgmt_file)
         assert content =~ "defmodule TestAPI.UserManagement"
-        assert content =~ "def get_users("
-        assert content =~ "def post_users("
+        assert content =~ "def get_users(client"
+        assert content =~ "def post_users(client"
 
         # Should create content module for content tag
         content_file = "lib/test_api/api/content.ex"
@@ -150,7 +150,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
         content = File.read!(content_file)
         assert content =~ "defmodule TestAPI.Content"
-        assert content =~ "def get_posts_id("
+        assert content =~ "def get_posts_id(client"
 
         # Should create fallback module for untagged operations
         untagged_file = "lib/test_api/api/untagged.ex"
@@ -158,7 +158,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
         content = File.read!(untagged_file)
         assert content =~ "defmodule TestAPI.Untagged"
-        assert content =~ "def get_untagged("
+        assert content =~ "def get_untagged(client"
       end)
     end
 
@@ -171,15 +171,15 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
         user_mgmt_content = File.read!("lib/test_api/api/user_management.ex")
 
         # GET /users should have optional parameters
-        assert user_mgmt_content =~ "def get_users(opts \\\\ [])"
+        assert user_mgmt_content =~ "def get_users(client, opts \\\\ [])"
 
         # POST /users should have required body
-        assert user_mgmt_content =~ "def post_users(body)"
+        assert user_mgmt_content =~ "def post_users(client, body)"
 
         content_content = File.read!("lib/test_api/api/content.ex")
 
         # GET /posts/{id} should have required path parameter
-        assert content_content =~ "def get_posts_id(id)"
+        assert content_content =~ "def get_posts_id(client, id)"
       end)
     end
 
@@ -259,9 +259,9 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
         content = File.read!(users_file)
         assert content =~ "defmodule TestAPI.Users"
-        assert content =~ "def get_users("
-        assert content =~ "def get_users_id("
-        assert content =~ "def get_users_id_posts("
+        assert content =~ "def get_users(client"
+        assert content =~ "def get_users_id(client"
+        assert content =~ "def get_users_id_posts(client"
 
         # Should not create separate modules for each path
         api_dir = "lib/test_api/api"

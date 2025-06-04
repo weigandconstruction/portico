@@ -26,7 +26,7 @@ defmodule Hydra.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/simple_tag.ex"))
-      assert content =~ "def get_simple()"
+      assert content =~ "def get_simple(client)"
       refute content =~ "opts \\\\ []"
     end
 
@@ -55,7 +55,7 @@ defmodule Hydra.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/users.ex"))
-      assert content =~ "def get_users_id(id, companyid)"
+      assert content =~ "def get_users_id(client, id, companyid)"
       refute content =~ "opts \\\\ []"
     end
 
@@ -77,7 +77,7 @@ defmodule Hydra.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/users.ex"))
-      assert content =~ "def get_users(opts \\\\ [])"
+      assert content =~ "def get_users(client, opts \\\\ [])"
     end
 
     test "generates correct signature for operation with both required and optional parameters",
@@ -104,7 +104,7 @@ defmodule Hydra.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/users.ex"))
-      assert content =~ "def get_users_id(id, opts \\\\ [])"
+      assert content =~ "def get_users_id(client, id, opts \\\\ [])"
     end
 
     test "generates correct signature for operation with request body", %{temp_dir: temp_dir} do
@@ -130,7 +130,7 @@ defmodule Hydra.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/users.ex"))
-      assert content =~ "def post_users(body)"
+      assert content =~ "def post_users(client, body)"
     end
 
     test "generates correct signature for operation with request body and parameters", %{
@@ -163,7 +163,7 @@ defmodule Hydra.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/users.ex"))
-      assert content =~ "def post_users(companyid, body, opts \\\\ [])"
+      assert content =~ "def post_users(client, companyid, body, opts \\\\ [])"
     end
   end
 
@@ -404,9 +404,9 @@ defmodule Hydra.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/users.ex"))
-      assert content =~ "def get_users("
-      assert content =~ "def get_users_id("
-      assert content =~ "def get_users_id_posts("
+      assert content =~ "def get_users(client"
+      assert content =~ "def get_users_id(client"
+      assert content =~ "def get_users_id_posts(client"
 
       # Ensure all three functions are present and unique
       get_users_count = (content |> String.split("def get_users(") |> length()) - 1
