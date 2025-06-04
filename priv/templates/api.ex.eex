@@ -42,9 +42,9 @@ end) |> Enum.join("\n") %>
           params: [
           <%= for param <-  Hydra.Helpers.query_parameters(path, operation) do %>
             <%= if param.required do %>
-            "<%= param.name %>": <%= param.internal_name %>,
+            {"<%= param.name %>", <%= param.internal_name %>},
             <% else %>
-            "<%= param.name %>": Keyword.get(opts, :<%= param.internal_name %>),
+            {"<%= param.name %>", Keyword.get(opts, :<%= param.internal_name %>)},
             <% end %>
           <% end %>
           ],

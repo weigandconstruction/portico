@@ -240,9 +240,9 @@ defmodule Hydra.TemplateRenderingTest do
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/search.ex"))
       assert content =~ "params: ["
-      assert content =~ "limit: limit"
-      assert content =~ "offset: Keyword.get(opts, :offset)"
-      assert content =~ "filter: Keyword.get(opts, :filter)"
+      assert content =~ "{\"limit\", limit}"
+      assert content =~ "{\"offset\", Keyword.get(opts, :offset)}"
+      assert content =~ "{\"filter\", Keyword.get(opts, :filter)}"
     end
 
     test "generates correct request body handling", %{temp_dir: temp_dir} do
