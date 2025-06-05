@@ -34,6 +34,7 @@ Hydra generates minimal API clients directly in your project from OpenAPI specs.
 - **Tag-based Module Organization**: Groups API operations by OpenAPI tags, falling back to path-based grouping
 - **Operation Filtering**: Generate only the operations you need using OpenAPI tags
 - **Type Documentation**: Generates comprehensive documentation for all parameters and operations
+- **Typespec Generation**: Elixir typespecs for all generated functions with proper parameter types
 
 ## 📋 Requirements
 
@@ -158,9 +159,9 @@ lib/
 - **Fallback Naming**: Operations without tags use path-based module names
 - **Unique Function Names**: Function names combine HTTP method with path segments
 
-### Documentation Generation
+### Documentation and Type Safety
 
-All generated functions include comprehensive documentation from the OpenAPI spec:
+All generated functions include documentation and typespecs from the OpenAPI spec:
 
 ```elixir
 @doc """
@@ -176,6 +177,10 @@ Returns detailed information about a specific user.
   - `fields` - `string` (optional) - Comma-separated list of fields to return
 
 """
+@spec get_user(Req.Request.t(), String.t(), keyword()) :: {:ok, any()} | {:error, Exception.t()}
+def get_user(client, user_id, opts \\ []) do
+  # Generated implementation...
+end
 ```
 
 ## 🤝 Contributing
