@@ -36,6 +36,9 @@ defmodule Mix.Tasks.Hydra.Generate do
 
   @impl Mix.Task
   def run(args) do
+    # Start dependencies required for HTTP requests
+    Mix.Task.run("app.start")
+
     {opts, _, _} =
       OptionParser.parse(args,
         switches: [module: :string, spec: :string, tag: :string, config: :string]

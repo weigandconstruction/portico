@@ -15,7 +15,7 @@ defmodule Hydra.Fetch do
   """
   @spec fetch(String.t()) :: {String.t(), content_type()}
   def fetch(url) do
-    response = Req.get!(url)
+    response = Req.get!(url, decode_body: false)
     content_type = detect_content_type(response)
     {response.body, content_type}
   end
