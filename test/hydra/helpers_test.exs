@@ -361,4 +361,267 @@ defmodule Hydra.HelpersTest do
       assert result == "/quantity-item-allocations/\#{allocation_id}/status-change"
     end
   end
+
+  describe "schema_to_typespec/1" do
+    test "converts string schema to String.t()" do
+      schema = %{"type" => "string"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "String.t()"
+    end
+
+    test "converts integer schema to integer()" do
+      schema = %{"type" => "integer"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "integer()"
+    end
+
+    test "converts number schema to float()" do
+      schema = %{"type" => "number"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "float()"
+    end
+
+    test "converts boolean schema to boolean()" do
+      schema = %{"type" => "boolean"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "boolean()"
+    end
+
+    test "converts array schema to list()" do
+      schema = %{"type" => "array"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "list()"
+    end
+
+    test "converts object schema to map()" do
+      schema = %{"type" => "object"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "map()"
+    end
+
+    test "handles nil schema" do
+      result = Helpers.schema_to_typespec(nil)
+      assert result == "any()"
+    end
+
+    test "handles unknown schema types" do
+      schema = %{"type" => "unknown"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "any()"
+    end
+
+    test "handles schema without type field" do
+      schema = %{"description" => "some field"}
+      result = Helpers.schema_to_typespec(schema)
+      assert result == "any()"
+    end
+  end
+
+  describe "function_typespec/3" do
+    alias Hydra.Spec.Parameter
+
+    test "generates typespec for function with no parameters" do
+      path = %SpecPath{path: "/users", parameters: []}
+      operation = %Operation{method: "get", parameters: [], request_body: nil}
+
+      result = Helpers.function_typespec("get_users", path, operation)
+
+      assert result ==
+               "@spec get_users(Req.Request.t()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+
+    test "generates typespec for function with required path parameter" do
+      path = %SpecPath{
+        path: "/users/{id}",
+        parameters: [
+          %Parameter{
+            name: "id",
+            internal_name: "id",
+            in: "path",
+            required: true,
+            schema: %{"type" => "string"}
+          }
+        ]
+      }
+
+      operation = %Operation{method: "get", parameters: [], request_body: nil}
+
+      result = Helpers.function_typespec("get_users_id", path, operation)
+
+      assert result ==
+               "@spec get_users_id(Req.Request.t(), String.t()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+
+    test "generates typespec for function with multiple required parameters" do
+      path = %SpecPath{
+        path: "/users/{user_id}/posts/{post_id}",
+        parameters: [
+          %Parameter{
+            name: "user_id",
+            internal_name: "user_id",
+            in: "path",
+            required: true,
+            schema: %{"type" => "string"}
+          },
+          %Parameter{
+            name: "post_id",
+            internal_name: "post_id",
+            in: "path",
+            required: true,
+            schema: %{"type" => "integer"}
+          }
+        ]
+      }
+
+      operation = %Operation{method: "get", parameters: [], request_body: nil}
+
+      result = Helpers.function_typespec("get_users_user_id_posts_post_id", path, operation)
+
+      assert result ==
+               "@spec get_users_user_id_posts_post_id(Req.Request.t(), String.t(), integer()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+
+    test "generates typespec for function with request body" do
+      path = %SpecPath{path: "/users", parameters: []}
+
+      operation = %Operation{
+        method: "post",
+        parameters: [],
+        request_body: %{
+          "content" => %{"application/json" => %{"schema" => %{"type" => "object"}}}
+        }
+      }
+
+      result = Helpers.function_typespec("post_users", path, operation)
+
+      assert result ==
+               "@spec post_users(Req.Request.t(), map()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+
+    test "generates typespec for function with optional parameters" do
+      path = %SpecPath{path: "/users", parameters: []}
+
+      operation = %Operation{
+        method: "get",
+        parameters: [
+          %Parameter{
+            name: "limit",
+            internal_name: "limit",
+            in: "query",
+            required: false,
+            schema: %{"type" => "integer"}
+          }
+        ],
+        request_body: nil
+      }
+
+      result = Helpers.function_typespec("get_users", path, operation)
+
+      assert result ==
+               "@spec get_users(Req.Request.t(), keyword()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+
+    test "generates typespec for function with required params, body, and optional params" do
+      path = %SpecPath{
+        path: "/users/{id}",
+        parameters: [
+          %Parameter{
+            name: "id",
+            internal_name: "id",
+            in: "path",
+            required: true,
+            schema: %{"type" => "string"}
+          }
+        ]
+      }
+
+      operation = %Operation{
+        method: "put",
+        parameters: [
+          %Parameter{
+            name: "include_metadata",
+            internal_name: "include_metadata",
+            in: "query",
+            required: false,
+            schema: %{"type" => "boolean"}
+          }
+        ],
+        request_body: %{
+          "content" => %{"application/json" => %{"schema" => %{"type" => "object"}}}
+        }
+      }
+
+      result = Helpers.function_typespec("put_users_id", path, operation)
+
+      assert result ==
+               "@spec put_users_id(Req.Request.t(), String.t(), map(), keyword()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+
+    test "handles parameters with different schema types" do
+      path = %SpecPath{path: "/test", parameters: []}
+
+      operation = %Operation{
+        method: "post",
+        parameters: [
+          %Parameter{
+            name: "count",
+            internal_name: "count",
+            in: "query",
+            required: true,
+            schema: %{"type" => "integer"}
+          },
+          %Parameter{
+            name: "active",
+            internal_name: "active",
+            in: "query",
+            required: true,
+            schema: %{"type" => "boolean"}
+          },
+          %Parameter{
+            name: "tags",
+            internal_name: "tags",
+            in: "query",
+            required: true,
+            schema: %{"type" => "array"}
+          }
+        ],
+        request_body: nil
+      }
+
+      result = Helpers.function_typespec("post_test", path, operation)
+
+      assert result ==
+               "@spec post_test(Req.Request.t(), integer(), boolean(), list()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+
+    test "handles parameters with nil or missing schema" do
+      path = %SpecPath{path: "/test", parameters: []}
+
+      operation = %Operation{
+        method: "get",
+        parameters: [
+          %Parameter{
+            name: "param1",
+            internal_name: "param1",
+            in: "query",
+            required: true,
+            schema: nil
+          },
+          %Parameter{
+            name: "param2",
+            internal_name: "param2",
+            in: "query",
+            required: true,
+            schema: %{"description" => "no type"}
+          }
+        ],
+        request_body: nil
+      }
+
+      result = Helpers.function_typespec("get_test", path, operation)
+
+      assert result ==
+               "@spec get_test(Req.Request.t(), any(), any()) :: {:ok, any()} | {:error, Exception.t()}"
+    end
+  end
 end

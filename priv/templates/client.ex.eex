@@ -50,6 +50,7 @@ defmodule <%= @module %>.Client do
       )
 
   """
+  @spec new(String.t(), keyword()) :: Req.Request.t()
   def new(base_url, options \\ []) when is_binary(base_url) and is_list(options) do
     Req.new([base_url: base_url] ++ options)
   end
@@ -72,6 +73,7 @@ defmodule <%= @module %>.Client do
       end
 
   """
+  @spec request(Req.Request.t(), keyword()) :: {:ok, any()} | {:error, Exception.t()}
   def request(client, options \\ []) do
     client
     |> clean_options(options)

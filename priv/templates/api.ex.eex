@@ -21,6 +21,7 @@ defmodule <%= @module %>.<%= @local_module %> do
 end) |> Enum.join("\n") %>
 <% end %>
     """
+    <%= Hydra.Helpers.function_typespec(Hydra.Helpers.function_name_for_operation(path, operation), path, operation) %>
     def <%= Hydra.Helpers.function_name_for_operation(path, operation) %>(<%= ["client", Hydra.Helpers.required_parameters(path, operation) |> Enum.map(& &1.internal_name), if(Hydra.Helpers.has_request_body?(operation), do: ["body"], else: []), if(!Enum.empty?(Hydra.Helpers.optional_parameters(path, operation)), do: ["opts \\\\ []"], else: [])] |> List.flatten() |> Enum.join(", ") %>) do
       <%= @module %>.Client.request(client,
         method: :<%= operation.method %>,

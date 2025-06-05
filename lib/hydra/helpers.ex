@@ -419,4 +419,73 @@ defmodule Hydra.Helpers do
     path_part = friendly_name(path.path)
     "#{operation.method}_#{path_part}"
   end
+
+  @doc """
+  Converts a JSON schema type to an Elixir type specification string.
+
+  ## Examples:
+
+      iex> Hydra.Helpers.schema_to_typespec(%{"type" => "string"})
+      "String.t()"
+
+      iex> Hydra.Helpers.schema_to_typespec(%{"type" => "integer"})
+      "integer()"
+
+  """
+  @spec schema_to_typespec(map() | nil) :: String.t()
+  def schema_to_typespec(nil), do: "any()"
+  def schema_to_typespec(%{"type" => "string"}), do: "String.t()"
+  def schema_to_typespec(%{"type" => "integer"}), do: "integer()"
+  def schema_to_typespec(%{"type" => "number"}), do: "float()"
+  def schema_to_typespec(%{"type" => "boolean"}), do: "boolean()"
+  def schema_to_typespec(%{"type" => "array"}), do: "list()"
+  def schema_to_typespec(%{"type" => "object"}), do: "map()"
+  def schema_to_typespec(_), do: "any()"
+
+  @doc """
+  Generates the typespec for an API function based on its parameters and operation.
+
+  ## Examples:
+
+      iex> path = %Hydra.Spec.Path{parameters: []}
+      iex> operation = %Hydra.Spec.Operation{parameters: [], method: "get", request_body: nil}
+      iex> Hydra.Helpers.function_typespec("get_users", path, operation)
+      "@spec get_users(Req.Request.t()) :: {:ok, any()} | {:error, Exception.t()}"
+
+  """
+  @spec function_typespec(String.t(), Path.t(), Operation.t()) :: String.t()
+  def function_typespec(function_name, %Path{} = path, %Operation{} = operation) do
+    required_params = required_parameters(path, operation)
+    optional_params = optional_parameters(path, operation)
+    has_body = has_request_body?(operation)
+
+    # Build parameter types list
+    param_types = ["Req.Request.t()"]
+
+    # Add required parameter types
+    param_types =
+      param_types ++
+        Enum.map(required_params, fn param ->
+          schema_to_typespec(param.schema)
+        end)
+
+    # Add body parameter if present
+    param_types =
+      if has_body do
+        param_types ++ ["map()"]
+      else
+        param_types
+      end
+
+    # Add opts parameter if there are optional parameters
+    param_types =
+      if !Enum.empty?(optional_params) do
+        param_types ++ ["keyword()"]
+      else
+        param_types
+      end
+
+    param_list = Enum.join(param_types, ", ")
+    "@spec #{function_name}(#{param_list}) :: {:ok, any()} | {:error, Exception.t()}"
+  end
 end
