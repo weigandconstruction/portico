@@ -27,11 +27,26 @@ defmodule Hydra.Fetch do
           String.contains?(content_type, "json") -> :json
           String.contains?(content_type, "yaml") -> :yaml
           String.contains?(content_type, "yml") -> :yaml
-          true -> :unknown
+          true -> guess_from_body(response.body)
         end
 
       [] ->
-        :unknown
+        guess_from_body(response.body)
+    end
+  end
+
+  defp guess_from_body(body) do
+    # Try to parse as JSON first, as it's more common for APIs
+    case Jason.decode(body) do
+      {:ok, _} ->
+        :json
+
+      {:error, _} ->
+        # Try to parse as YAML
+        case YamlElixir.read_from_string(body) do
+          {:ok, _} -> :yaml
+          {:error, _} -> :unknown
+        end
     end
   end
 end
