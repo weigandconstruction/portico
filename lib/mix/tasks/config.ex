@@ -54,7 +54,7 @@ defmodule Mix.Tasks.Hydra.Config do
   end
 
   defp generate_config(spec_path, output_file) do
-    spec = Hydra.parse(spec_path)
+    spec = Hydra.parse!(spec_path)
 
     config = %{
       tags: extract_unique_tags(spec),

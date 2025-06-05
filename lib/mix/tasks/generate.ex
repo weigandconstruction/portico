@@ -48,7 +48,7 @@ defmodule Mix.Tasks.Hydra.Generate do
   end
 
   defp generate(opts) do
-    spec = Hydra.parse(opts[:spec])
+    spec = Hydra.parse!(opts[:spec])
 
     # Parse tag filters from CLI options or config file
     tag_filters = parse_tag_filters(opts)

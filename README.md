@@ -30,8 +30,7 @@ Hydra generates minimal API clients directly in your project from OpenAPI specs.
 
 - **Lightweight**: Very minimal implementation on top of the `Req` HTTP client
 - **Code Generation**: Creates client code in your project, not as an external dependency
-- **OpenAPI 3.0 Support**: Parse and generate clients from OpenAPI 3.0 JSON specifications (limited JSON-only support currently,
-  but PRs are welcome)
+- **OpenAPI 3.0 Support**: Parse and generate clients from OpenAPI 3.0 specifications in JSON or YAML format
 - **Tag-based Module Organization**: Groups API operations by OpenAPI tags, falling back to path-based grouping
 - **Operation Filtering**: Generate only the operations you need using OpenAPI tags
 - **Type Documentation**: Generates comprehensive documentation for all parameters and operations
@@ -39,7 +38,7 @@ Hydra generates minimal API clients directly in your project from OpenAPI specs.
 ## 📋 Requirements
 
 - Elixir 1.15 or later
-- OpenAPI 3.0 specification in JSON format (incomplete at this time)
+- OpenAPI 3.0 specification in JSON or YAML format
 
 ### Supported Versions
 
@@ -113,7 +112,11 @@ mix hydra.generate --module MyAPI --spec spec.json --config hydra.config.json
 Or from a local file:
 
 ```bash
+# From JSON file
 mix hydra.generate --module MyAPI --spec path/to/openapi.json
+
+# From YAML file
+mix hydra.generate --module MyAPI --spec path/to/openapi.yaml
 ```
 
 This creates Elixir modules in your `lib/` directory - the code becomes part of your project.
