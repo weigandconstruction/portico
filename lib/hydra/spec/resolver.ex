@@ -73,24 +73,29 @@ defmodule Hydra.Spec.Resolver do
           MapSet.member?(visiting_refs, ref_path) ->
             current
 
-          # Check if we've already fully resolved this reference
-          :ets.lookup(cache_table, ref_path) != [] ->
-            [{_, cached_result}] = :ets.lookup(cache_table, ref_path)
-            cached_result
-
           # New ref to resolve
           true ->
-            # Mark as visiting
-            new_visiting = MapSet.put(visiting_refs, ref_path)
+            case :ets.lookup(cache_table, ref_path) do
+              [{_, cached_result}] ->
+                cached_result
 
-            # Resolve the reference
-            resolved =
-              resolve_json_pointer(ref_path, root)
-              |> resolve_refs(root, new_visiting, cache_table)
+              [] ->
+                # Mark as visiting
+                new_visiting = MapSet.put(visiting_refs, ref_path)
 
-            # Cache the resolved result
-            :ets.insert(cache_table, {ref_path, resolved})
-            resolved
+                # Resolve the reference
+                resolved =
+                  resolve_json_pointer(ref_path, root)
+                  |> resolve_refs(root, new_visiting, cache_table)
+
+                # Cache more aggressively but avoid huge objects
+                # Only skip caching if it's a massive nested structure
+                if should_cache?(resolved) do
+                  :ets.insert(cache_table, {ref_path, resolved})
+                end
+
+                resolved
+            end
         end
 
       # Regular map - recursively resolve all values
@@ -129,4 +134,19 @@ defmodule Hydra.Spec.Resolver do
   defp resolve_json_pointer(ref, _root) do
     raise "Unsupported reference format: #{ref}. Only internal references starting with '#/' are supported."
   end
+
+  # Check if a resolved value should be cached
+  # Cache most things but avoid extremely large nested structures
+  defp should_cache?(value) when is_map(value) do
+    # Don't cache if it's a huge map (likely a full schema with tons of properties)
+    map_size(value) <= 100
+  end
+
+  defp should_cache?(value) when is_list(value) do
+    # Don't cache very large lists
+    length(value) <= 50
+  end
+
+  # Primitives and strings are always cached
+  defp should_cache?(_value), do: true
 end
