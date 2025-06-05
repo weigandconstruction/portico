@@ -68,13 +68,18 @@ defmodule Hydra do
   def parse!("https://" <> _ = url) do
     url
     |> Hydra.Fetch.fetch()
-    |> parse_content()
-    |> Hydra.Spec.parse()
+    |> do_parse!()
   end
 
   def parse!(path) do
     {File.read!(path), path_to_content_type(path)}
+    |> do_parse!()
+  end
+
+  defp do_parse!(content) do
+    content
     |> parse_content()
+    |> Hydra.Spec.Resolver.resolve()
     |> Hydra.Spec.parse()
   end
 
