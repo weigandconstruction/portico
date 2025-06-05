@@ -191,6 +191,122 @@ defmodule Hydra.TemplateRenderingTest do
       assert content =~ "url: \"/companies/\#{company_id}/projects/\#{project_id}\""
     end
 
+    test "converts camelCase parameter names to snake_case in URLs", %{temp_dir: temp_dir} do
+      # This test specifically covers the bug fix for parameter name interpolation
+      path_params = [
+        %Parameter{name: "assetId", internal_name: "asset_id", in: "path", required: true},
+        %Parameter{
+          name: "historyServiceId",
+          internal_name: "history_service_id",
+          in: "path",
+          required: true
+        }
+      ]
+
+      spec =
+        create_test_spec([
+          create_path(
+            "/assets/{assetId}/history-services/{historyServiceId}",
+            [
+              create_operation("get", "asset_services", "Get asset history service")
+            ],
+            path_params
+          )
+        ])
+
+      generate_and_test(spec, temp_dir, "TestAPI")
+
+      content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/asset_services.ex"))
+
+      # Should use snake_case parameter names in URL interpolation
+      assert content =~ "url: \"/assets/\#{asset_id}/history-services/\#{history_service_id}\""
+
+      # Should NOT contain the original camelCase names
+      refute content =~ ~r/\#{assetId}/
+      refute content =~ ~r/\#{historyServiceId}/
+
+      # Function signature should also use snake_case (accounting for line breaks)
+      assert content =~ "def get_assets_asset_id_history_services_history_service_id("
+      assert content =~ "asset_id,"
+      assert content =~ "history_service_id"
+    end
+
+    test "handles complex camelCase to snake_case conversions", %{temp_dir: temp_dir} do
+      path_params = [
+        %Parameter{name: "companyId", internal_name: "company_id", in: "path", required: true},
+        %Parameter{
+          name: "projectItemId",
+          internal_name: "project_item_id",
+          in: "path",
+          required: true
+        },
+        %Parameter{
+          name: "subItemUUID",
+          internal_name: "sub_item_uuid",
+          in: "path",
+          required: true
+        }
+      ]
+
+      spec =
+        create_test_spec([
+          create_path(
+            "/companies/{companyId}/projects/{projectItemId}/sub-items/{subItemUUID}",
+            [
+              create_operation("delete", "projects", "Delete project sub-item")
+            ],
+            path_params
+          )
+        ])
+
+      generate_and_test(spec, temp_dir, "TestAPI")
+
+      content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/projects.ex"))
+
+      # All parameter names should be converted to snake_case
+      assert content =~
+               "url: \"/companies/\#{company_id}/projects/\#{project_item_id}/sub-items/\#{sub_item_uuid}\""
+
+      # Original camelCase should not appear
+      refute content =~ ~r/\#{companyId}/
+      refute content =~ ~r/\#{projectItemId}/
+      refute content =~ ~r/\#{subItemUUID}/
+
+      # Function signature should use snake_case (accounting for line breaks and truncation)
+      assert content =~
+               "def delete_companies_company_id_projects_project_item_id_sub_items_sub_item_uui"
+
+      assert content =~ "company_id,"
+      assert content =~ "project_item_id,"
+      assert content =~ "sub_item_uuid"
+    end
+
+    test "handles parameters that are already snake_case", %{temp_dir: temp_dir} do
+      path_params = [
+        %Parameter{name: "user_id", internal_name: "user_id", in: "path", required: true},
+        %Parameter{name: "post_id", internal_name: "post_id", in: "path", required: true}
+      ]
+
+      spec =
+        create_test_spec([
+          create_path(
+            "/users/{user_id}/posts/{post_id}",
+            [
+              create_operation("get", "posts", "Get user post")
+            ],
+            path_params
+          )
+        ])
+
+      generate_and_test(spec, temp_dir, "TestAPI")
+
+      content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/posts.ex"))
+
+      # Should work correctly with already snake_case parameters
+      assert content =~ "url: \"/users/\#{user_id}/posts/\#{post_id}\""
+      assert content =~ "def get_users_user_id_posts_post_id(client, user_id, post_id)"
+    end
+
     test "generates correct headers for header parameters", %{temp_dir: temp_dir} do
       header_params = [
         %Parameter{

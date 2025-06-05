@@ -114,6 +114,31 @@ defmodule Hydra.Helpers do
   end
 
   @doc """
+  Interpolates path parameters in a string using the internal parameter names.
+  This ensures that the generated URLs use the snake_case parameter names from the function.
+
+  ## Example:
+
+      iex> path = "/assets/{assetId}/history-services/{historyServiceId}"
+      iex> params = [
+      ...>   %Hydra.Spec.Parameter{name: "assetId", internal_name: "asset_id", in: "path"},
+      ...>   %Hydra.Spec.Parameter{name: "historyServiceId", internal_name: "history_service_id", in: "path"}
+      ...> ]
+      iex> Hydra.Helpers.interpolated_path_with_params(path, params)
+      "/assets/\\\#{asset_id}/history-services/\\\#{history_service_id}"
+
+  """
+  @spec interpolated_path_with_params(String.t(), [Parameter.t()]) :: String.t()
+  def interpolated_path_with_params(path, parameters)
+      when is_binary(path) and is_list(parameters) do
+    path_params = Enum.filter(parameters, &(&1.in == "path"))
+
+    Enum.reduce(path_params, path, fn param, acc ->
+      String.replace(acc, "{#{param.name}}", "\#{#{param.internal_name}}")
+    end)
+  end
+
+  @doc """
   Returns all unique parameters for a given path and operation combination.
   Combines path-level and operation-level parameters, removing duplicates by internal_name.
 

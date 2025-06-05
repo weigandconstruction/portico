@@ -242,4 +242,123 @@ defmodule Hydra.HelpersTest do
       end
     end
   end
+
+  describe "interpolated_path_with_params/2" do
+    alias Hydra.Spec.Parameter
+
+    test "interpolates single path parameter with snake_case conversion" do
+      path = "/assets/{assetId}"
+
+      params = [
+        %Parameter{name: "assetId", internal_name: "asset_id", in: "path"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/assets/\#{asset_id}"
+    end
+
+    test "interpolates multiple path parameters" do
+      path = "/assets/{assetId}/history-services/{historyServiceId}"
+
+      params = [
+        %Parameter{name: "assetId", internal_name: "asset_id", in: "path"},
+        %Parameter{name: "historyServiceId", internal_name: "history_service_id", in: "path"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/assets/\#{asset_id}/history-services/\#{history_service_id}"
+    end
+
+    test "ignores non-path parameters" do
+      path = "/users/{userId}"
+
+      params = [
+        %Parameter{name: "userId", internal_name: "user_id", in: "path"},
+        %Parameter{name: "limit", internal_name: "limit", in: "query"},
+        %Parameter{name: "Authorization", internal_name: "authorization", in: "header"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/users/\#{user_id}"
+    end
+
+    test "handles paths with no parameters" do
+      path = "/users"
+
+      params = [
+        %Parameter{name: "limit", internal_name: "limit", in: "query"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/users"
+    end
+
+    test "handles empty parameter list" do
+      path = "/users/{id}"
+      params = []
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/users/{id}"
+    end
+
+    test "handles complex parameter names with underscores and numbers" do
+      path = "/api/v2/{companyId}/items/{itemId123}/sub-items/{subItemId}"
+
+      params = [
+        %Parameter{name: "companyId", internal_name: "company_id", in: "path"},
+        %Parameter{name: "itemId123", internal_name: "item_id123", in: "path"},
+        %Parameter{name: "subItemId", internal_name: "sub_item_id", in: "path"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/api/v2/\#{company_id}/items/\#{item_id123}/sub-items/\#{sub_item_id}"
+    end
+
+    test "handles parameters that don't appear in path" do
+      path = "/users/{userId}"
+
+      params = [
+        %Parameter{name: "userId", internal_name: "user_id", in: "path"},
+        %Parameter{name: "nonExistentId", internal_name: "non_existent_id", in: "path"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/users/\#{user_id}"
+    end
+
+    test "handles parameters with same original and internal names" do
+      path = "/posts/{post_id}/comments/{comment_id}"
+
+      params = [
+        %Parameter{name: "post_id", internal_name: "post_id", in: "path"},
+        %Parameter{name: "comment_id", internal_name: "comment_id", in: "path"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/posts/\#{post_id}/comments/\#{comment_id}"
+    end
+
+    test "handles duplicate parameter names (should use first occurrence)" do
+      path = "/resources/{resourceId}"
+
+      params = [
+        %Parameter{name: "resourceId", internal_name: "resource_id", in: "path"},
+        %Parameter{name: "resourceId", internal_name: "duplicate_resource_id", in: "path"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/resources/\#{resource_id}"
+    end
+
+    test "real-world example from unite spec" do
+      path = "/quantity-item-allocations/{allocationId}/status-change"
+
+      params = [
+        %Parameter{name: "allocationId", internal_name: "allocation_id", in: "path"}
+      ]
+
+      result = Helpers.interpolated_path_with_params(path, params)
+      assert result == "/quantity-item-allocations/\#{allocation_id}/status-change"
+    end
+  end
 end
