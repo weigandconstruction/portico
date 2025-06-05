@@ -1,0 +1,47 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Test API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/users": {
+      "parameters": [
+        {"$ref": "#/components/parameters/Query"}
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/UserList"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Query": {
+        "in": "query",
+        "name": "q",
+        "schema": {"type": "string"}
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "name": {"type": "string"}
+        }
+      },
+      "UserList": {
+        "type": "array",
+        "items": {"$ref": "#/components/schemas/User"}
+      }
+    }
+  }
+}
