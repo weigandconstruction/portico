@@ -7,6 +7,50 @@ defmodule Hydra.HelpersTest do
 
   doctest Hydra.Helpers
 
+  describe "friendly_name/1" do
+    test "handles basic paths" do
+      assert Helpers.friendly_name("/users/{id}") == "users_id"
+      assert Helpers.friendly_name("/api/v1/posts") == "api_v1_posts"
+    end
+
+    test "handles OData-style paths with parentheses, equals, and quotes" do
+      assert Helpers.friendly_name("/users(userPrincipalName='{user_principal_name}')") ==
+               "usersuser_principal_nameuser_principal_name"
+
+      assert Helpers.friendly_name("/items(key='value')") == "itemskeyvalue"
+      assert Helpers.friendly_name("/test(id='{test_id}')") == "testidtest_id"
+    end
+
+    test "handles complex paths with multiple special characters" do
+      assert Helpers.friendly_name("/api/v1.0/users(userPrincipalName='{upn}')/messages") ==
+               "api_v1_0_usersuser_principal_nameupn_messages"
+
+      assert Helpers.friendly_name("/test(a='1',b=\"2\")/endpoint") == "testa1b2_endpoint"
+    end
+
+    test "handles $ characters in paths" do
+      assert Helpers.friendly_name("/users/$count") == "users_count"
+      assert Helpers.friendly_name("/api/v1.0/users/$metadata") == "api_v1_0_users_metadata"
+      assert Helpers.friendly_name("/endpoints/$batch") == "endpoints_batch"
+    end
+
+    test "handles complex Microsoft Graph style paths" do
+      assert Helpers.friendly_name(
+               "/users/{user-id}/ownedDevices/microsoft.graph.endpoint/$count"
+             ) == "users_user_id_owned_devices_microsoft_graph_endpoint_count"
+
+      assert Helpers.friendly_name(
+               "/users(userPrincipalName='{user_principal_name}')/$links/manager"
+             ) == "usersuser_principal_nameuser_principal_name_links_manager"
+    end
+
+    test "handles edge cases with consecutive special characters" do
+      assert Helpers.friendly_name("/test(){}[]$/-") == "test"
+      assert Helpers.friendly_name("///test///") == "test"
+      assert Helpers.friendly_name("/{{{test}}}") == "test"
+    end
+  end
+
   describe "tag_to_module_name/1" do
     test "converts simple tags to module names" do
       assert Helpers.tag_to_module_name("users") == "Users"
@@ -229,6 +273,22 @@ defmodule Hydra.HelpersTest do
 
       result = Helpers.function_name_for_operation(path, operation)
       assert result == "put_api_v1_0_resources_with_dashes"
+    end
+
+    test "handles paths with OData-style parameters" do
+      path = %SpecPath{path: "/users(userPrincipalName='{user_principal_name}')"}
+      operation = %Operation{method: "patch"}
+
+      result = Helpers.function_name_for_operation(path, operation)
+      assert result == "patch_usersuser_principal_nameuser_principal_name"
+    end
+
+    test "handles paths with parentheses, equals signs, and quotes" do
+      path = %SpecPath{path: "/test(key='value')/endpoint"}
+      operation = %Operation{method: "get"}
+
+      result = Helpers.function_name_for_operation(path, operation)
+      assert result == "get_testkeyvalue_endpoint"
     end
 
     test "works with all HTTP methods" do

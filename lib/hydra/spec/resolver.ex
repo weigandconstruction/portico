@@ -49,39 +49,48 @@ defmodule Hydra.Spec.Resolver do
 
   """
   def resolve(spec) when is_map(spec) do
-    resolve_refs(spec, spec, [])
+    resolve_refs(spec, spec, MapSet.new(), %{})
   end
 
   # Main recursive function that walks the spec tree
-  defp resolve_refs(current, root, path) when is_map(current) do
+  # visiting_refs: MapSet of refs currently being resolved (for cycle detection)
+  # resolved_cache: Map of already resolved refs to prevent re-resolution
+  defp resolve_refs(current, root, visiting_refs, resolved_cache) when is_map(current) do
     cond do
       # Handle $ref object - replace with referenced content
       Map.has_key?(current, "$ref") ->
         ref_path = current["$ref"]
 
-        # Prevent infinite recursion by checking if we're already resolving this path
-        if ref_path in path do
-          raise "Circular reference detected: #{inspect(path ++ [ref_path])}"
-        end
+        cond do
+          # Currently visiting this ref - circular reference, return ref as-is
+          MapSet.member?(visiting_refs, ref_path) ->
+            current
 
-        resolve_json_pointer(ref_path, root)
-        |> resolve_refs(root, [ref_path | path])
+          # New ref to resolve
+          true ->
+            # Mark as visiting
+            new_visiting = MapSet.put(visiting_refs, ref_path)
+
+            # Resolve the reference
+            resolve_json_pointer(ref_path, root)
+            |> resolve_refs(root, new_visiting, resolved_cache)
+        end
 
       # Regular map - recursively resolve all values
       true ->
         current
         |> Enum.map(fn {key, value} ->
-          {key, resolve_refs(value, root, path)}
+          {key, resolve_refs(value, root, visiting_refs, resolved_cache)}
         end)
         |> Map.new()
     end
   end
 
-  defp resolve_refs(current, root, path) when is_list(current) do
-    Enum.map(current, fn item -> resolve_refs(item, root, path) end)
+  defp resolve_refs(current, root, visiting_refs, resolved_cache) when is_list(current) do
+    Enum.map(current, fn item -> resolve_refs(item, root, visiting_refs, resolved_cache) end)
   end
 
-  defp resolve_refs(current, _root, _path), do: current
+  defp resolve_refs(current, _root, _visiting_refs, _resolved_cache), do: current
 
   # Resolves a JSON Pointer reference like "#/components/parameters/Query"
   defp resolve_json_pointer("#/" <> pointer, root) do

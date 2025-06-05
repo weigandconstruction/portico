@@ -24,9 +24,11 @@ hydra-*.tar
 
 # generated files for development
 config.exs
-procore
-hilti
 *.json
 *.yaml
 
 .elixir_ls
+
+procore
+hilti
+graph

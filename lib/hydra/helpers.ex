@@ -21,8 +21,10 @@ defmodule Hydra.Helpers do
     path
     |> Macro.underscore()
     |> String.replace(~r/[{}]/, "")
+    |> String.replace(~r/[()='"",\[\]]/, "")
     |> String.replace(~r/\//, "_")
     |> String.replace(~r/[-:]/, "_")
+    |> String.replace("$", "")
     |> String.trim_leading("_")
     |> String.trim_trailing("_")
   end

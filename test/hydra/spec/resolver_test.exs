@@ -238,7 +238,7 @@ defmodule Hydra.Spec.ResolverTest do
       end
     end
 
-    test "raises error for circular references" do
+    test "handles circular references gracefully" do
       spec = %{
         "components" => %{
           "schemas" => %{
@@ -263,9 +263,16 @@ defmodule Hydra.Spec.ResolverTest do
         }
       }
 
-      assert_raise RuntimeError, ~r/Circular reference detected/, fn ->
-        Resolver.resolve(spec)
-      end
+      # Should not raise an error, but return the spec with circular refs intact
+      result = Resolver.resolve(spec)
+
+      # Verify the structure is preserved
+      assert result["components"]["schemas"]["A"]["$ref"] == "#/components/schemas/B"
+      assert result["components"]["schemas"]["B"]["$ref"] == "#/components/schemas/A"
+
+      assert result["paths"]["/test"]["get"]["responses"]["200"]["content"]["application/json"][
+               "schema"
+             ]["$ref"] == "#/components/schemas/A"
     end
 
     test "raises error for unsupported reference format" do

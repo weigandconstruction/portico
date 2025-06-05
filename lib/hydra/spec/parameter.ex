@@ -67,6 +67,7 @@ defmodule Hydra.Spec.Parameter do
     |> String.replace("-", "")
     |> String.replace("[", "_")
     |> String.replace("]", "")
+    |> String.replace("$", "dollar_")
     |> escape_parameter_name()
   end
 
