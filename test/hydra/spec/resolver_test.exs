@@ -270,13 +270,17 @@ defmodule Hydra.Spec.ResolverTest do
       # The exact resolution depends on traversal order, but both should have $ref
       assert Map.has_key?(result["components"]["schemas"]["A"], "$ref")
       assert Map.has_key?(result["components"]["schemas"]["B"], "$ref")
-      
+
       # The important thing is that we don't have infinite expansion
       assert is_map(result["components"]["schemas"]["A"])
       assert is_map(result["components"]["schemas"]["B"])
 
       # The schema reference should also be preserved
-      schema_ref = result["paths"]["/test"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
+      schema_ref =
+        result["paths"]["/test"]["get"]["responses"]["200"]["content"]["application/json"][
+          "schema"
+        ]
+
       assert Map.has_key?(schema_ref, "$ref")
       assert schema_ref["$ref"] in ["#/components/schemas/A", "#/components/schemas/B"]
     end
@@ -300,12 +304,12 @@ defmodule Hydra.Spec.ResolverTest do
       }
 
       result = Resolver.resolve(spec)
-      
+
       # The TreeNode should prevent infinite expansion
       tree_node = result["components"]["schemas"]["TreeNode"]
       assert tree_node["type"] == "object"
       assert tree_node["properties"]["value"]["type"] == "string"
-      
+
       # The circular reference should be handled gracefully
       children_items = tree_node["properties"]["children"]["items"]
       assert is_map(children_items)
@@ -329,19 +333,20 @@ defmodule Hydra.Spec.ResolverTest do
       }
 
       result = Resolver.resolve(spec)
-      
+
       # Should not crash due to infinite recursion
       # The exact resolution depends on caching and traversal order
       assert is_map(result["components"]["schemas"]["A"])
       assert is_map(result["components"]["schemas"]["B"])
       assert is_map(result["components"]["schemas"]["C"])
-      
+
       # At least one should maintain object structure
       schemas = [
         result["components"]["schemas"]["A"],
-        result["components"]["schemas"]["B"], 
+        result["components"]["schemas"]["B"],
         result["components"]["schemas"]["C"]
       ]
+
       assert Enum.any?(schemas, &(&1["type"] == "object"))
     end
 
@@ -365,15 +370,15 @@ defmodule Hydra.Spec.ResolverTest do
       }
 
       result = Resolver.resolve(spec)
-      
+
       user = result["components"]["schemas"]["User"]
       assert user["type"] == "object"
       assert user["properties"]["name"]["type"] == "string"
-      
+
       # Should not cause infinite recursion
       assert is_map(user["properties"]["bestFriend"])
       assert is_map(user["properties"]["friends"]["items"])
-      
+
       # Structure should be preserved
       assert user["properties"]["friends"]["type"] == "array"
     end

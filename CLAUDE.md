@@ -49,6 +49,7 @@ iex -S mix
 ## Code Generation
 
 Generated clients include:
+
 - Base client module with HTTP configuration (`Client` module)
 - API modules for each path with HTTP methods as functions
 - Automatic parameter handling (path, query, header parameters)
@@ -78,5 +79,6 @@ client = MyAPI.Client.new("https://api.example.com", [
 
 ## Workflow Reminders
 
-- Be sure to run `mix format` when done generating all code
 - When done making changes, run tests to confirm everything is working
+- Don't forget to run `mix format` after finishing code generation
+- Don't forget to run `mix credo` after finishing code generation and fix any issues
