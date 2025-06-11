@@ -9,32 +9,35 @@
 > Some things will just flat out not work.
 > Use at your own risk and expect breaking changes.
 
-**Hydra** is an Elixir library that generates HTTP API clients directly into your project from OpenAPI 3.0 specifications. Instead of searching for existing SDKs or building API clients from scratch, Hydra generates client code that becomes part of your codebase. This approach gives you complete control and allows you to generate only the API operations you actually need (filtering capabilities coming soon).
+**Hydra** is an Elixir library that generates HTTP API clients directly into your project from OpenAPI 3.0 specifications.
 
 ## 🎯 Why Hydra?
 
-Hydra helps you avoid:
+This project was inspired by [this Dashbit blog post](https://dashbit.co/blog/sdks-with-req-stripe). As outlined in the
+post, there are some valid concerns with API clients in general:
 
-- Bloated SDKs with hundreds of methods you don't need leading to slow compiles
-- Outdated or unmaintained third-party libraries
-- Custom HTTP client code that's tedious to write and maintain as APIs change
+- **Bloat**: SDKs usually include the entire API surface area and can be quite large leading to slow compile times
+- **Complexity**: They are either hand-crafted or generated from tools like [OpenAPI
+  Generator](https://github.com/OpenAPITools/openapi-generator). If an SDK is not available, either of these options has
+  a high level of complexity.
+- **Opaque**: "What do we do when things go wrong?" With code hidden in external dependencies we become dependent on
+  this code being correct and maintained.
 
-Hydra generates minimal API clients directly in your project from OpenAPI specs. You get:
+The article proposes we craft small, simple clients. This is excellent advice, but what if we need more than just a few
+API calls or have a larger number of services?
 
-- **Minimal External Dependencies**: Generated code becomes part of your codebase
-- **Complete Control**: Modify, extend, or customize the generated code as needed
-- **Selective Generation**: Generate only the API operations you actually use
-- **Always Up-to-Date**: Easily regenerate your client code when the OpenAPI Spec changes
+Hydra solves this by giving you a lightweight, simple, and transparent solution, without requiring you to build your own
+clients. We do this by leveraging the OpenAPI 3.0 spec, Req, and code generation. With Hydra you can achieve the same
+results without the extra work.
 
 ## 🚀 Features
 
-- **Lightweight**: Very minimal implementation on top of the `Req` HTTP client
-- **Code Generation**: Creates client code in your project, not as an external dependency
+- **Lightweight**: Very minimal implementation on top of the `Req` HTTP client, no other dependencies
+- **Code Generation**: Creates client code in your project that you can edit or remove
 - **OpenAPI 3.0 Support**: Parse and generate clients from OpenAPI 3.0 specifications in JSON or YAML format
-- **Tag-based Module Organization**: Groups API operations by OpenAPI tags, falling back to path-based grouping
-- **Operation Filtering**: Generate only the operations you need using OpenAPI tags
-- **Type Documentation**: Generates comprehensive documentation for all parameters and operations
-- **Typespec Generation**: Elixir typespecs for all generated functions with proper parameter types
+- **Operation Filtering**: Generate only the operations you need by filtering by tags
+- **Type Documentation**: Generate documentation for all parameters and operations
+- **Typespec Generation**: Elixir typespecs for all generated functions
 
 ## 📋 Requirements
 
@@ -68,7 +71,7 @@ mix deps.get
 
 ## 🎯 Quick Start
 
-### 1. Discover Available API Operations
+### 1. Generate a Configuration
 
 First, generate a configuration showing the tags available in your OpenAPI specification:
 
@@ -76,128 +79,60 @@ First, generate a configuration showing the tags available in your OpenAPI speci
 # Generate config with default name (hydra.config.json)
 mix hydra.config --spec https://api.example.com/openapi.json
 
+# Generate config from a local spec file
+mix hydra.config --spec openapi.yaml
+
 # Generate config with custom name
-mix hydra.config --spec https://api.example.com/openapi.json --output my-api.config.json
+mix hydra.config --spec openapi.yaml --output my-api.config.json
 ```
 
 This generates a config file containing all available tags:
 
 ```json
 {
-  "tags": ["users", "orders", "products", "authentication"],
   "spec_info": {
+    "source": "https://api.example.com/openapi.json",
     "title": "My API",
-    "version": "1.0.0"
-  }
+    "module": "ServiceName.API"
+  }.
+  "tags": ["users", "orders", "products", "authentication"],
 }
 ```
 
-You can curate the list of tags to only those you need. When generating with a config file, Hydra will only generate
-operations that include tags in this list.
+You can curate the list of tags to only those you need. When running `mix hydra.generate --config` with a config file, Hydra will only generate
+operations that include these tags.
 
 ### 2. Generate an API Client
 
-Generate client code directly into your project from a remote OpenAPI specification:
+Generate a client with a specified configuration:
 
 ```bash
-# Generate all API operations
-mix hydra.generate --module MyAPI --spec https://api.example.com/openapi.json
-
-# Generate operations for a specific tag
-mix hydra.generate --module MyAPI --spec spec.json --tag users
-
-# Generate all tags present in a config file
-mix hydra.generate --module MyAPI --spec spec.json --config hydra.config.json
+mix hydra.generate --config path/to/config.json
 ```
 
-Or from a local file:
+You can also use the generator without a configuration by providing extra flags:
 
 ```bash
-# From JSON file
 mix hydra.generate --module MyAPI --spec path/to/openapi.json
 
-# From YAML file
-mix hydra.generate --module MyAPI --spec path/to/openapi.yaml
+# Specify a tag
+mix hydra.generate --module MyAPI --spec path/to/openapi.yaml --tag users
 ```
 
-This creates Elixir modules in your `lib/` directory - the code becomes part of your project.
+This creates Elixir modules in your `lib/` directory. You can nest it in your application by providing the full module
+namespace – e.g. `MyApp.ServiceName.API`.
 
 ### 3. Use Your Generated Client
 
-Create a client instance with authentication and make requests:
+Authentication and usage will vary by API. A simple bearer token authentication may be used as shown below.
 
 ```elixir
-# Create client with bearer token authentication
+# Create client with bearer token authentication (note, the provided options are just Req options)
 client = MyAPI.Client.new("https://api.example.com", auth: {:bearer, "your-token"})
 
 # Make an API call using generated module
 case MyAPI.Users.get_user(client, "user123") do
-  {:ok, response} -> IO.inspect(response.body)
+  {:ok, user} -> IO.inspect(user)
   {:error, exception} -> IO.puts("Error: #{exception.message}")
 end
 ```
-
-## 📁 Generated Code Structure
-
-Hydra generates client code directly in your project's `lib/` directory:
-
-```
-lib/
-├── my_api/
-│   ├── client.ex          # HTTP client configuration
-│   └── api/
-│       ├── users.ex       # User management operations
-│       ├── orders.ex      # Order operations
-│       └── products.ex    # Product operations
-```
-
-**This code is yours** - you can modify it, extend it, or customize it however you need.
-
-### Module Organization
-
-- **Tag-based Grouping**: Operations are grouped by their first OpenAPI tag
-- **Fallback Naming**: Operations without tags use path-based module names
-- **Unique Function Names**: Function names combine HTTP method with path segments
-
-### Documentation and Type Safety
-
-All generated functions include documentation and typespecs from the OpenAPI spec:
-
-```elixir
-@doc """
-Get user by ID
-
-Returns detailed information about a specific user.
-
-## Parameters
-
-- `client` - HTTP client instance (required)
-- `user_id` - `string` (required) - Unique identifier for the user
-- `opts` - `keyword` (optional) - Optional parameters as keyword list
-  - `fields` - `string` (optional) - Comma-separated list of fields to return
-
-"""
-@spec get_user(Req.Request.t(), String.t(), keyword()) :: {:ok, any()} | {:error, Exception.t()}
-def get_user(client, user_id, opts \\ []) do
-  # Generated implementation...
-end
-```
-
-## 🤝 Contributing
-
-As this is a development version, contributions are welcome but please note:
-
-1. **Breaking Changes**: Expect frequent breaking changes
-2. **API Stability**: No API stability guarantees
-3. **Testing**: All contributions should include tests
-4. **Documentation**: Update documentation for new features
-
-## 🔗 Related Projects
-
-- [OpenAPI 3.0 Specification](https://swagger.io/specification/)
-- [Req HTTP Client](https://github.com/wojtekmach/req)
-- [ExDoc Documentation](https://github.com/elixir-lang/ex_doc)
-
----
-
-> 🚧 **Remember**: This is a development version. Use in production at your own risk!
