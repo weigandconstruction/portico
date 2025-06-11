@@ -51,6 +51,7 @@ defmodule Hydra.Helpers do
   Converts a tag string into a module name by transforming it into CamelCase.
   Handles hierarchical tags (separated by / or -) and creates a valid Elixir module name.
   Removes special characters that are not valid in module names.
+  Prefixes with "N" if the result would start with a number.
 
   ## Examples:
 
@@ -63,21 +64,33 @@ defmodule Hydra.Helpers do
       iex> Hydra.Helpers.tag_to_module_name("Quality & Safety/punch-list")
       "QualitySafetyPunchList"
 
+      iex> Hydra.Helpers.tag_to_module_name("1-Click Applications")
+      "N1ClickApplications"
+
   """
   @spec tag_to_module_name(String.t()) :: String.t()
   def tag_to_module_name(tag) when is_binary(tag) do
-    tag
-    |> String.replace(~r/[\/\-_&\s]+/, " ")
-    |> String.replace(~r/[^a-zA-Z0-9\s]/, "")
-    |> String.split()
-    |> Enum.map(&Macro.camelize/1)
-    |> Enum.join()
+    module_name =
+      tag
+      |> String.replace(~r/[\/\-_&\s]+/, " ")
+      |> String.replace(~r/[^a-zA-Z0-9\s]/, "")
+      |> String.split()
+      |> Enum.map(&Macro.camelize/1)
+      |> Enum.join()
+
+    # If the module name starts with a number, prefix it with "N"
+    if Regex.match?(~r/^\d/, module_name) do
+      "N" <> module_name
+    else
+      module_name
+    end
   end
 
   @doc """
   Converts a tag string into a friendly filename by transforming it into snake_case.
   Similar to tag_to_module_name but for file naming.
   Removes special characters that are not valid in filenames.
+  Prefixes with "n" if the result would start with a number.
 
   ## Examples:
 
@@ -87,16 +100,27 @@ defmodule Hydra.Helpers do
       iex> Hydra.Helpers.tag_to_filename("Quality & Safety/punch-list")
       "quality_safety_punch_list"
 
+      iex> Hydra.Helpers.tag_to_filename("1-Click Applications")
+      "n1_click_applications"
+
   """
   @spec tag_to_filename(String.t()) :: String.t()
   def tag_to_filename(tag) when is_binary(tag) do
-    tag
-    |> String.downcase()
-    |> String.replace(~r/[\/\-_&\s]+/, "_")
-    |> String.replace(~r/[^a-z0-9_]/, "")
-    |> String.replace(~r/_+/, "_")
-    |> String.trim_leading("_")
-    |> String.trim_trailing("_")
+    filename =
+      tag
+      |> String.downcase()
+      |> String.replace(~r/[\/\-_&\s]+/, "_")
+      |> String.replace(~r/[^a-z0-9_]/, "")
+      |> String.replace(~r/_+/, "_")
+      |> String.trim_leading("_")
+      |> String.trim_trailing("_")
+
+    # If the filename starts with a number, prefix it with "n"
+    if Regex.match?(~r/^\d/, filename) do
+      "n" <> filename
+    else
+      filename
+    end
   end
 
   @doc """

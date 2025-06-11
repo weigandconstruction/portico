@@ -84,6 +84,13 @@ defmodule Hydra.HelpersTest do
     test "handles empty and nil values" do
       assert Helpers.tag_to_module_name("") == ""
     end
+
+    test "handles tags starting with numbers" do
+      assert Helpers.tag_to_module_name("1-Click Applications") == "N1ClickApplications"
+      assert Helpers.tag_to_module_name("2FA/authentication") == "N2FAAuthentication"
+      assert Helpers.tag_to_module_name("3rd-party-integrations") == "N3rdPartyIntegrations"
+      assert Helpers.tag_to_module_name("404-handlers") == "N404Handlers"
+    end
   end
 
   describe "tag_to_filename/1" do
@@ -123,6 +130,13 @@ defmodule Hydra.HelpersTest do
 
     test "handles empty and nil values" do
       assert Helpers.tag_to_filename("") == ""
+    end
+
+    test "handles tags starting with numbers" do
+      assert Helpers.tag_to_filename("1-Click Applications") == "n1_click_applications"
+      assert Helpers.tag_to_filename("2FA/authentication") == "n2fa_authentication"
+      assert Helpers.tag_to_filename("3rd-party-integrations") == "n3rd_party_integrations"
+      assert Helpers.tag_to_filename("404-handlers") == "n404_handlers"
     end
   end
 
