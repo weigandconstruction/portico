@@ -5,29 +5,37 @@ defmodule Mix.Tasks.Hydra.Generate do
 
   ## Options
 
-    * `--module` - The name of the API client module (required)
-    * `--spec` - The URL or file path to the OpenAPI specification (required)
+    * `--config` - Path to a Hydra config file (when used, no other options are allowed)
+    * `--module` - The name of the API client module (required when not using --config)
+    * `--spec` - The URL or file path to the OpenAPI specification (required when not using --config)
     * `--tag` - Generate APIs only for operations with this specific tag
-    * `--config` - Path to a JSON config file containing a list of tags to generate
 
   ## Examples
 
-      # Generate all APIs
+      # Generate using a config file
+      mix hydra.generate --config hydra.config.json
+
+      # Generate all APIs without config
       mix hydra.generate --module MyAPI --spec https://api.example.com/openapi.json
 
       # Generate APIs only for operations tagged with "users"
       mix hydra.generate --module MyAPI --spec spec.json --tag users
 
-      # Generate APIs for multiple tags using a config file
-      mix hydra.generate --module MyAPI --spec spec.json --config tags.json
-
   ## Config File Format
 
-  The config file should be a JSON file with the following format:
+  When using --config, the file should contain:
 
       {
+        "spec_info": {
+          "source": "https://api.example.com/openapi.json",
+          "title": "My API",
+          "module": "MyAPI"
+        },
         "tags": ["users", "posts", "comments"]
       }
+
+  The config file provides the module name and spec source, so --module and --spec
+  options are not allowed when using --config.
 
   """
 
@@ -44,10 +52,43 @@ defmodule Mix.Tasks.Hydra.Generate do
         switches: [module: :string, spec: :string, tag: :string, config: :string]
       )
 
-    opts[:module] || raise "You must provide a name for the API client using --module"
-    opts = Keyword.put(opts, :name, Macro.underscore(opts[:module]))
-
+    # Process options based on whether config is provided
+    opts = process_options(opts)
     generate(opts)
+  end
+
+  defp process_options(opts) do
+    if opts[:config] do
+      # When using config, validate no other options are provided
+      validate_config_usage(opts)
+
+      # Load config and extract module/spec info
+      config = load_full_config(opts[:config])
+
+      opts
+      |> Keyword.put(:module, config["spec_info"]["module"])
+      |> Keyword.put(:spec, config["spec_info"]["source"])
+      |> Keyword.put(:name, Macro.underscore(config["spec_info"]["module"]))
+      |> Keyword.put(:tags, config["tags"])
+    else
+      # Traditional usage - require module and spec
+      opts[:module] || raise "You must provide a name for the API client using --module"
+      opts[:spec] || raise "You must provide a spec using --spec"
+
+      Keyword.put(opts, :name, Macro.underscore(opts[:module]))
+    end
+  end
+
+  defp validate_config_usage(opts) do
+    invalid_opts = []
+
+    invalid_opts = if opts[:module], do: ["--module" | invalid_opts], else: invalid_opts
+    invalid_opts = if opts[:spec], do: ["--spec" | invalid_opts], else: invalid_opts
+    invalid_opts = if opts[:tag], do: ["--tag" | invalid_opts], else: invalid_opts
+
+    unless Enum.empty?(invalid_opts) do
+      raise "When using --config, the following options are not allowed: #{Enum.join(invalid_opts, ", ")}"
+    end
   end
 
   defp generate(opts) do
@@ -122,9 +163,9 @@ defmodule Mix.Tasks.Hydra.Generate do
       opts[:tag] ->
         [opts[:tag]]
 
-      # Config file with tags
-      opts[:config] ->
-        load_config_file(opts[:config])
+      # Tags from processed config
+      opts[:tags] ->
+        opts[:tags]
 
       # No filters
       true ->
@@ -132,15 +173,13 @@ defmodule Mix.Tasks.Hydra.Generate do
     end
   end
 
-  defp load_config_file(config_path) do
+  defp load_full_config(config_path) do
     case File.read(config_path) do
       {:ok, content} ->
         case Jason.decode(content) do
-          {:ok, %{"tags" => tags}} when is_list(tags) ->
-            tags
-
-          {:ok, _} ->
-            raise "Config file must contain a 'tags' field with a list of tag names"
+          {:ok, config} ->
+            validate_config_structure(config)
+            config
 
           {:error, reason} ->
             raise "Failed to parse config file as JSON: #{inspect(reason)}"
@@ -148,6 +187,23 @@ defmodule Mix.Tasks.Hydra.Generate do
 
       {:error, reason} ->
         raise "Failed to read config file: #{inspect(reason)}"
+    end
+  end
+
+  defp validate_config_structure(config) do
+    unless Map.has_key?(config, "spec_info") do
+      raise "Config file must contain a 'spec_info' field"
+    end
+
+    spec_info = config["spec_info"]
+
+    unless is_map(spec_info) and Map.has_key?(spec_info, "source") and
+             Map.has_key?(spec_info, "module") do
+      raise "Config 'spec_info' must contain 'source' and 'module' fields"
+    end
+
+    unless Map.has_key?(config, "tags") and is_list(config["tags"]) do
+      raise "Config file must contain a 'tags' field with a list of tag names"
     end
   end
 

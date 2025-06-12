@@ -25,16 +25,17 @@ defmodule Mix.Tasks.Hydra.Config do
   The generated configuration file has the following structure:
 
       {
-        "tags": ["users", "posts", "comments"],
         "spec_info": {
+          "source": "https://api.example.com/openapi.json",
           "title": "My API",
-          "version": "1.0.0"
-        }
+          "module": "ServiceName"
+        },
+        "tags": ["users", "posts", "comments"]
       }
 
   This config file can then be used with the generate task:
 
-      mix hydra.generate --module MyAPI --spec spec.json --config my-config.json
+      mix hydra.generate --config my-config.json
 
   """
 
@@ -60,8 +61,8 @@ defmodule Mix.Tasks.Hydra.Config do
     spec = Hydra.parse!(spec_path)
 
     config = %{
-      tags: extract_unique_tags(spec),
-      spec_info: extract_spec_info(spec)
+      spec_info: extract_spec_info(spec, spec_path),
+      tags: extract_unique_tags(spec)
     }
 
     json_content = Jason.encode!(config, pretty: true)
@@ -69,6 +70,7 @@ defmodule Mix.Tasks.Hydra.Config do
 
     Mix.shell().info("Configuration file generated: #{output_file}")
     Mix.shell().info("Found #{length(config.tags)} unique tags")
+    Mix.shell().info("Generated module name: #{config.spec_info.module}")
   end
 
   defp extract_unique_tags(spec) do
@@ -82,13 +84,29 @@ defmodule Mix.Tasks.Hydra.Config do
     |> Enum.sort()
   end
 
-  defp extract_spec_info(spec) do
+  defp extract_spec_info(spec, spec_path) do
+    title = get_in(spec.info, ["title"]) || "API"
+
     %{
-      title: get_in(spec.info, ["title"]),
-      version: get_in(spec.info, ["version"]),
-      description: get_in(spec.info, ["description"])
+      source: spec_path,
+      title: title,
+      module: generate_module_name(title)
     }
-    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
-    |> Map.new()
+  end
+
+  defp generate_module_name(title) do
+    # Convert title to a valid Elixir module name
+    name =
+      title
+      # Remove special characters
+      |> String.replace(~r/[^\w\s]/, "")
+      # Split on whitespace
+      |> String.split(~r/\s+/)
+      # Capitalize each word
+      |> Enum.map(&String.capitalize/1)
+      # Join together
+      |> Enum.join()
+
+    name
   end
 end
