@@ -94,8 +94,8 @@ This generates a config file containing all available tags:
     "source": "https://api.example.com/openapi.json",
     "title": "My API",
     "module": "ServiceName.API"
-  }.
-  "tags": ["users", "orders", "products", "authentication"],
+  },
+  "tags": ["users", "orders", "products", "authentication"]
 }
 ```
 
