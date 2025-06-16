@@ -58,7 +58,8 @@ Add `portico` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:portico, "~> 0.1.0"}
+    {:portico, github: "weigandconstruction/portico", only: :dev},
+    {:req, "~> 0.5"}
   ]
 end
 ```
