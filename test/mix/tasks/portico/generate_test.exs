@@ -431,7 +431,9 @@ defmodule Mix.Tasks.Portico.GenerateTest do
         assert content =~ "@default_base_url \"https://api.test.com\""
         # Should have new/1 function that uses default
         assert content =~ "def new(options \\\\ []) when is_list(options)"
-        assert content =~ "Keyword.put_new(options, :base_url, @default_base_url)"
+        assert content =~ "|> Keyword.put_new(:base_url, @default_base_url)"
+        # Should get application config
+        assert content =~ "Application.get_env(:test_api, :client, [])"
       end)
     end
 

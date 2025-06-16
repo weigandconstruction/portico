@@ -37,6 +37,11 @@ defmodule <%= @module %>.Client do
   @doc """
   Creates a new client with the given options.
 
+  Options are merged in the following order (later values override earlier ones):
+  1. Application config (e.g., from config/test.exs)
+  2. Default base URL (if not already set)
+  3. Provided options
+
   ## Examples
 
       # Using default base URL
@@ -61,13 +66,36 @@ defmodule <%= @module %>.Client do
         retry: :transient
       )
 
+  ## Application Configuration
+
+  You can set default options in your application config:
+
+      # config/test.exs
+      config :<%= Macro.underscore(@module) %>,
+        plug: {Req.Test, MyApp.MockServer}
+
+      # config/dev.exs
+      config :<%= Macro.underscore(@module) %>,
+        retry: false,
+        cache: true
+
   """
   @spec new(keyword()) :: Req.Request.t()
   def new(options \\ []) when is_list(options) do
-    options = Keyword.put_new(options, :base_url, @default_base_url)
+    config_options = Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
+    
+    options =
+      config_options
+      |> Keyword.merge(options)
+      |> Keyword.put_new(:base_url, @default_base_url)
+      
     Req.new(options)
   end<% else %>  @doc """
   Creates a new client with the given options.
+
+  Options are merged in the following order (later values override earlier ones):
+  1. Application config (e.g., from config/test.exs)
+  2. Provided options (must include base_url)
 
   ## Examples
 
@@ -90,9 +118,28 @@ defmodule <%= @module %>.Client do
         auth: {:bearer, "token"}
       )
 
+  ## Application Configuration
+
+  You can set default options in your application config:
+
+      # config/test.exs
+      config :<%= Macro.underscore(@module) %>,
+        plug: {Req.Test, MyApp.MockServer}
+
+      # config/dev.exs
+      config :<%= Macro.underscore(@module) %>,
+        retry: false,
+        cache: true
+
+  Note: base_url must still be provided in the options when creating the client.
+
   """
   @spec new(keyword()) :: Req.Request.t()
   def new(options) when is_list(options) do
+    config_options = Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
+    
+    options = Keyword.merge(config_options, options)
+    
     unless Keyword.has_key?(options, :base_url) do
       raise ArgumentError, "base_url is required"
     end

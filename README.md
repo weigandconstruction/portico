@@ -163,3 +163,27 @@ client = MyAPI.Client.new(
   plug: {MyApp.RequestLogger, []}
 )
 ```
+
+### Application Configuration
+
+You can optionally set default client options in your application config. This is especially useful for testing with mocks:
+
+```elixir
+# config/test.exs
+config :my_api,
+  client: [
+    plug: {Req.Test, MyApp.MockServer}
+  ]
+
+# config/dev.exs
+config :my_api,
+  client: [
+    retry: false,
+    cache: true,
+    pool_timeout: 5000
+  ]
+
+# Options from config are automatically merged with options passed to new/1
+# (provided options take precedence)
+client = MyAPI.Client.new(auth: {:bearer, "token"})
+```
