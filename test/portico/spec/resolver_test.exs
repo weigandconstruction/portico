@@ -1,6 +1,6 @@
-defmodule Hydra.Spec.ResolverTest do
+defmodule Portico.Spec.ResolverTest do
   use ExUnit.Case
-  alias Hydra.Spec.Resolver
+  alias Portico.Spec.Resolver
 
   describe "resolve/1" do
     test "resolves basic $ref in parameters" do
@@ -592,7 +592,7 @@ defmodule Hydra.Spec.ResolverTest do
 
   describe "integration with file parsing" do
     test "resolves $refs in JSON files" do
-      spec = Hydra.parse!("test/fixtures/test_spec_with_refs.json")
+      spec = Portico.parse!("test/fixtures/test_spec_with_refs.json")
 
       # Verify that references were resolved during parsing
       users_path = Enum.find(spec.paths, fn path -> path.path == "/users" end)
@@ -607,7 +607,7 @@ defmodule Hydra.Spec.ResolverTest do
     end
 
     test "resolves $refs in YAML files" do
-      spec = Hydra.parse!("test/fixtures/test_spec_with_refs.yaml")
+      spec = Portico.parse!("test/fixtures/test_spec_with_refs.yaml")
 
       # Verify that references were resolved during parsing
       users_path = Enum.find(spec.paths, fn path -> path.path == "/users" end)
@@ -622,8 +622,8 @@ defmodule Hydra.Spec.ResolverTest do
     end
 
     test "JSON and YAML produce equivalent resolved specs" do
-      json_spec = Hydra.parse!("test/fixtures/test_spec_with_refs.json")
-      yaml_spec = Hydra.parse!("test/fixtures/test_spec_with_refs.yaml")
+      json_spec = Portico.parse!("test/fixtures/test_spec_with_refs.json")
+      yaml_spec = Portico.parse!("test/fixtures/test_spec_with_refs.yaml")
 
       # Both should have the same resolved parameter
       json_path = Enum.find(json_spec.paths, fn path -> path.path == "/users" end)

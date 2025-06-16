@@ -1,4 +1,4 @@
-defmodule Hydra.Fetch do
+defmodule Portico.Fetch do
   @moduledoc """
   Handles fetching OpenAPI specifications from remote URLs.
 

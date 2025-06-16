@@ -1,7 +1,7 @@
-defmodule Hydra.Spec.OperationTest do
+defmodule Portico.Spec.OperationTest do
   use ExUnit.Case, async: true
 
-  alias Hydra.Spec.Operation
+  alias Portico.Spec.Operation
 
   describe "parse/1" do
     test "parses a minimal operation" do
@@ -123,7 +123,7 @@ defmodule Hydra.Spec.OperationTest do
       assert operation.request_body == nil
     end
 
-    test "parses parameters into Hydra.Spec.Parameter structs" do
+    test "parses parameters into Portico.Spec.Parameter structs" do
       input = %{
         "method" => "get",
         "parameters" => [
@@ -145,7 +145,7 @@ defmodule Hydra.Spec.OperationTest do
       operation = Operation.parse(input)
 
       assert length(operation.parameters) == 2
-      assert Enum.all?(operation.parameters, &is_struct(&1, Hydra.Spec.Parameter))
+      assert Enum.all?(operation.parameters, &is_struct(&1, Portico.Spec.Parameter))
 
       limit_param = Enum.find(operation.parameters, &(&1.name == "limit"))
       assert limit_param != nil
@@ -158,7 +158,7 @@ defmodule Hydra.Spec.OperationTest do
       assert offset_param.required == false
     end
 
-    test "parses responses into Hydra.Spec.Response structs" do
+    test "parses responses into Portico.Spec.Response structs" do
       input = %{
         "method" => "get",
         "responses" => %{
@@ -191,16 +191,16 @@ defmodule Hydra.Spec.OperationTest do
       assert Map.has_key?(operation.responses, "500")
 
       success_response = operation.responses["200"]
-      assert is_struct(success_response, Hydra.Spec.Response)
+      assert is_struct(success_response, Portico.Spec.Response)
       assert success_response.description == "Success"
       assert Map.has_key?(success_response.content, "application/json")
 
       not_found_response = operation.responses["404"]
-      assert is_struct(not_found_response, Hydra.Spec.Response)
+      assert is_struct(not_found_response, Portico.Spec.Response)
       assert not_found_response.description == "Not found"
 
       error_response = operation.responses["500"]
-      assert is_struct(error_response, Hydra.Spec.Response)
+      assert is_struct(error_response, Portico.Spec.Response)
       assert error_response.description == "Internal server error"
       assert Map.has_key?(error_response.headers, "X-Request-ID")
     end

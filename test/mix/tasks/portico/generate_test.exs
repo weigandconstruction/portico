@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Hydra.GenerateTest do
+defmodule Mix.Tasks.Portico.GenerateTest do
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO
@@ -99,14 +99,14 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
       assert_raise RuntimeError,
                    "You must provide a name for the API client using --module",
                    fn ->
-                     Mix.Tasks.Hydra.Generate.run(["--spec", "test.json"])
+                     Mix.Tasks.Portico.Generate.run(["--spec", "test.json"])
                    end
     end
 
     test "processes module name correctly", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         # Check that the lib directory was created with the right name
@@ -118,7 +118,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
     test "creates client module", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         client_file = "lib/test_api/client.ex"
@@ -132,7 +132,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
     test "creates API modules grouped by tags", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         # Should create user_management module for tagged operations
@@ -165,7 +165,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
     test "generates correct function signatures", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         user_mgmt_content = File.read!("lib/test_api/api/user_management.ex")
@@ -186,7 +186,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
     test "generates correct documentation", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         user_mgmt_content = File.read!("lib/test_api/api/user_management.ex")
@@ -205,7 +205,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
     test "generates correct HTTP client calls", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         user_mgmt_content = File.read!("lib/test_api/api/user_management.ex")
@@ -250,7 +250,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         # Should create only one module for all "users" tagged operations
@@ -290,7 +290,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         # Should create module based on first tag only
@@ -325,7 +325,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         # Should create module with sanitized name
@@ -358,7 +358,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
 
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         # Should create modules based on paths
@@ -382,7 +382,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
     } do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
         api_dir = "lib/test_api/api"
@@ -403,7 +403,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
     test "handles missing spec file gracefully" do
       assert_raise File.Error, fn ->
         capture_io(fn ->
-          Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", "nonexistent.json"])
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", "nonexistent.json"])
         end)
       end
     end
@@ -415,7 +415,7 @@ defmodule Mix.Tasks.Hydra.GenerateTest do
       File.cd!(temp_dir, fn ->
         assert_raise Jason.DecodeError, fn ->
           capture_io(fn ->
-            Mix.Tasks.Hydra.Generate.run(["--module", "TestAPI", "--spec", invalid_spec])
+            Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", invalid_spec])
           end)
         end
       end)

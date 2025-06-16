@@ -1,4 +1,4 @@
-defmodule Hydra.Spec.Resolver do
+defmodule Portico.Spec.Resolver do
   @moduledoc """
   Resolves $ref references in OpenAPI specifications.
 
@@ -44,13 +44,13 @@ defmodule Hydra.Spec.Resolver do
         }
       }
 
-      resolved = Hydra.Spec.Resolver.resolve(spec)
+      resolved = Portico.Spec.Resolver.resolve(spec)
       # resolved["paths"]["/users"]["parameters"] will contain the actual Query parameter
 
   """
   def resolve(spec) when is_map(spec) do
     # Use ETS for caching refs
-    cache_table = :ets.new(:hydra_cache, [:set, :private])
+    cache_table = :ets.new(:portico_cache, [:set, :private])
 
     try do
       resolve_refs(spec, spec, MapSet.new(), cache_table)

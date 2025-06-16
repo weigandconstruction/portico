@@ -1,9 +1,9 @@
-defmodule Hydra.Helpers do
+defmodule Portico.Helpers do
   @moduledoc """
-  A collection of helper functions for working with paths and operations in Hydra.
+  A collection of helper functions for working with paths and operations in Portico.
   """
 
-  alias Hydra.Spec.{Operation, Parameter, Path}
+  alias Portico.Spec.{Operation, Parameter, Path}
 
   @doc """
   Converts a path string into a more human-readable format by replacing
@@ -12,7 +12,7 @@ defmodule Hydra.Helpers do
 
   ## Example:
 
-      iex> Hydra.Helpers.friendly_name("/rest/v1.0/bim_files/{id}")
+      iex> Portico.Helpers.friendly_name("/rest/v1.0/bim_files/{id}")
       "rest_v1_0_bim_files_id"
 
   """
@@ -36,7 +36,7 @@ defmodule Hydra.Helpers do
 
   ## Example:
 
-      iex> Hydra.Helpers.module_name("/rest/v1.0/bim_files/{id}")
+      iex> Portico.Helpers.module_name("/rest/v1.0/bim_files/{id}")
       "RestV10BimFilesId"
 
   """
@@ -55,16 +55,16 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> Hydra.Helpers.tag_to_module_name("Core/Workflows/workflow-tools")
+      iex> Portico.Helpers.tag_to_module_name("Core/Workflows/workflow-tools")
       "CoreWorkflowsWorkflowTools"
 
-      iex> Hydra.Helpers.tag_to_module_name("user-management")
+      iex> Portico.Helpers.tag_to_module_name("user-management")
       "UserManagement"
 
-      iex> Hydra.Helpers.tag_to_module_name("Quality & Safety/punch-list")
+      iex> Portico.Helpers.tag_to_module_name("Quality & Safety/punch-list")
       "QualitySafetyPunchList"
 
-      iex> Hydra.Helpers.tag_to_module_name("1-Click Applications")
+      iex> Portico.Helpers.tag_to_module_name("1-Click Applications")
       "N1ClickApplications"
 
   """
@@ -94,13 +94,13 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> Hydra.Helpers.tag_to_filename("Core/Workflows/workflow-tools")
+      iex> Portico.Helpers.tag_to_filename("Core/Workflows/workflow-tools")
       "core_workflows_workflow_tools"
 
-      iex> Hydra.Helpers.tag_to_filename("Quality & Safety/punch-list")
+      iex> Portico.Helpers.tag_to_filename("Quality & Safety/punch-list")
       "quality_safety_punch_list"
 
-      iex> Hydra.Helpers.tag_to_filename("1-Click Applications")
+      iex> Portico.Helpers.tag_to_filename("1-Click Applications")
       "n1_click_applications"
 
   """
@@ -129,7 +129,7 @@ defmodule Hydra.Helpers do
 
   ## Example:
 
-      iex> Hydra.Helpers.interpolated_path("/rest/v1.0/bim_files/{id}")
+      iex> Portico.Helpers.interpolated_path("/rest/v1.0/bim_files/{id}")
       "/rest/v1.0/bim_files/\\\#{id}"
 
   """
@@ -147,10 +147,10 @@ defmodule Hydra.Helpers do
 
       iex> path = "/assets/{assetId}/history-services/{historyServiceId}"
       iex> params = [
-      ...>   %Hydra.Spec.Parameter{name: "assetId", internal_name: "asset_id", in: "path"},
-      ...>   %Hydra.Spec.Parameter{name: "historyServiceId", internal_name: "history_service_id", in: "path"}
+      ...>   %Portico.Spec.Parameter{name: "assetId", internal_name: "asset_id", in: "path"},
+      ...>   %Portico.Spec.Parameter{name: "historyServiceId", internal_name: "history_service_id", in: "path"}
       ...> ]
-      iex> Hydra.Helpers.interpolated_path_with_params(path, params)
+      iex> Portico.Helpers.interpolated_path_with_params(path, params)
       "/assets/\\\#{asset_id}/history-services/\\\#{history_service_id}"
 
   """
@@ -170,9 +170,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
-      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.function_parameters(path, operation) |> length()
+      iex> path = %Portico.Spec.Path{parameters: [%Portico.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Portico.Spec.Operation{parameters: [%Portico.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Portico.Helpers.function_parameters(path, operation) |> length()
       2
 
   """
@@ -188,9 +188,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
-      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.query_parameters(path, operation) |> length()
+      iex> path = %Portico.Spec.Path{parameters: [%Portico.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Portico.Spec.Operation{parameters: [%Portico.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Portico.Helpers.query_parameters(path, operation) |> length()
       1
 
   """
@@ -206,9 +206,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "Authorization", internal_name: "authorization", in: "header", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
-      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.header_parameters(path, operation) |> length()
+      iex> path = %Portico.Spec.Path{parameters: [%Portico.Spec.Parameter{name: "Authorization", internal_name: "authorization", in: "header", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Portico.Spec.Operation{parameters: [%Portico.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Portico.Helpers.header_parameters(path, operation) |> length()
       1
 
   """
@@ -224,9 +224,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
-      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.required_parameters(path, operation) |> length()
+      iex> path = %Portico.Spec.Path{parameters: [%Portico.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Portico.Spec.Operation{parameters: [%Portico.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Portico.Helpers.required_parameters(path, operation) |> length()
       1
 
   """
@@ -242,9 +242,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
-      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.optional_parameters(path, operation) |> length()
+      iex> path = %Portico.Spec.Path{parameters: [%Portico.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}]}
+      iex> operation = %Portico.Spec.Operation{parameters: [%Portico.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: []}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Portico.Helpers.optional_parameters(path, operation) |> length()
       1
 
   """
@@ -259,12 +259,12 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> operation = %Hydra.Spec.Operation{request_body: %{"content" => %{}}, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
-      iex> Hydra.Helpers.has_request_body?(operation)
+      iex> operation = %Portico.Spec.Operation{request_body: %{"content" => %{}}, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Portico.Helpers.has_request_body?(operation)
       true
 
-      iex> operation = %Hydra.Spec.Operation{request_body: nil, method: "get", parameters: [], responses: %{}, security: %{}, tags: []}
-      iex> Hydra.Helpers.has_request_body?(operation)
+      iex> operation = %Portico.Spec.Operation{request_body: nil, method: "get", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Portico.Helpers.has_request_body?(operation)
       false
 
   """
@@ -281,8 +281,8 @@ defmodule Hydra.Helpers do
   ## Examples:
 
       iex> request_body = %{"content" => %{"application/json" => %{"schema" => %{"type" => "object", "properties" => %{"name" => %{"type" => "string", "description" => "User name"}, "age" => %{"type" => "integer"}}, "required" => ["name"]}}}}
-      iex> operation = %Hydra.Spec.Operation{request_body: request_body, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
-      iex> Hydra.Helpers.request_body_parameters(operation) |> length()
+      iex> operation = %Portico.Spec.Operation{request_body: request_body, method: "post", parameters: [], responses: %{}, security: %{}, tags: []}
+      iex> Portico.Helpers.request_body_parameters(operation) |> length()
       2
 
   """
@@ -328,9 +328,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: [%Hydra.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: [], schema: %{"type" => "string"}, description: "Company ID"}]}
-      iex> operation = %Hydra.Spec.Operation{parameters: [%Hydra.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: [], schema: %{"type" => "integer"}, description: "Maximum results"}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
-      iex> Hydra.Helpers.all_parameters_for_docs(path, operation) |> length()
+      iex> path = %Portico.Spec.Path{parameters: [%Portico.Spec.Parameter{name: "company_id", internal_name: "company_id", in: "path", required: true, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: [], schema: %{"type" => "string"}, description: "Company ID"}]}
+      iex> operation = %Portico.Spec.Operation{parameters: [%Portico.Spec.Parameter{name: "limit", internal_name: "limit", in: "query", required: false, deprecated: false, explode: false, allow_reserved: false, allow_empty_value: false, examples: [], schema: %{"type" => "integer"}, description: "Maximum results"}], method: "get", responses: %{}, security: %{}, tags: [], request_body: nil}
+      iex> Portico.Helpers.all_parameters_for_docs(path, operation) |> length()
       2
 
   """
@@ -405,8 +405,8 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> paths = [%Hydra.Spec.Path{path: "/users", operations: [%Hydra.Spec.Operation{tags: ["user-management"], method: "get"}]}]
-      iex> Hydra.Helpers.group_operations_by_tag(paths) |> Map.keys()
+      iex> paths = [%Portico.Spec.Path{path: "/users", operations: [%Portico.Spec.Operation{tags: ["user-management"], method: "get"}]}]
+      iex> Portico.Helpers.group_operations_by_tag(paths) |> Map.keys()
       ["user-management"]
 
   """
@@ -434,9 +434,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{path: "/rest/v1.0/users/{id}"}
-      iex> operation = %Hydra.Spec.Operation{method: "get"}
-      iex> Hydra.Helpers.function_name_for_operation(path, operation)
+      iex> path = %Portico.Spec.Path{path: "/rest/v1.0/users/{id}"}
+      iex> operation = %Portico.Spec.Operation{method: "get"}
+      iex> Portico.Helpers.function_name_for_operation(path, operation)
       "get_rest_v1_0_users_id"
 
   """
@@ -451,10 +451,10 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> Hydra.Helpers.schema_to_typespec(%{"type" => "string"})
+      iex> Portico.Helpers.schema_to_typespec(%{"type" => "string"})
       "String.t()"
 
-      iex> Hydra.Helpers.schema_to_typespec(%{"type" => "integer"})
+      iex> Portico.Helpers.schema_to_typespec(%{"type" => "integer"})
       "integer()"
 
   """
@@ -473,9 +473,9 @@ defmodule Hydra.Helpers do
 
   ## Examples:
 
-      iex> path = %Hydra.Spec.Path{parameters: []}
-      iex> operation = %Hydra.Spec.Operation{parameters: [], method: "get", request_body: nil}
-      iex> Hydra.Helpers.function_typespec("get_users", path, operation)
+      iex> path = %Portico.Spec.Path{parameters: []}
+      iex> operation = %Portico.Spec.Operation{parameters: [], method: "get", request_body: nil}
+      iex> Portico.Helpers.function_typespec("get_users", path, operation)
       "@spec get_users(Req.Request.t()) :: {:ok, any()} | {:error, Exception.t()}"
 
   """

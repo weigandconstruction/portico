@@ -1,20 +1,20 @@
-defmodule Hydra do
+defmodule Portico do
   @moduledoc """
   Main entry point for parsing OpenAPI 3.0 specifications.
 
-  Hydra can parse OpenAPI specs from either remote URLs or local files,
-  converting them into structured `Hydra.Spec` data that can be used
+  Portico can parse OpenAPI specs from either remote URLs or local files,
+  converting them into structured `Portico.Spec` data that can be used
   for generating API client code.
 
   ## Examples
 
       # Parse from a remote URL
-      spec = Hydra.parse!("https://api.example.com/openapi.json")
-      spec = Hydra.parse!("https://api.example.com/openapi.yaml")
+      spec = Portico.parse!("https://api.example.com/openapi.json")
+      spec = Portico.parse!("https://api.example.com/openapi.yaml")
 
       # Parse from a local file
-      spec = Hydra.parse!("path/to/openapi.json")
-      spec = Hydra.parse!("path/to/openapi.yaml")
+      spec = Portico.parse!("path/to/openapi.json")
+      spec = Portico.parse!("path/to/openapi.yaml")
 
   ## Supported Formats
 
@@ -29,7 +29,7 @@ defmodule Hydra do
   - Invalid YAML format (`YamlElixir.ParsingError`)
   - Network errors for remote URLs (`Req` exceptions)
   - File not found for local files (`File.Error`)
-  - Invalid OpenAPI structure (validation errors from `Hydra.Spec.parse/1`)
+  - Invalid OpenAPI structure (validation errors from `Portico.Spec.parse/1`)
 
   """
 
@@ -42,17 +42,17 @@ defmodule Hydra do
 
   ## Returns
 
-  Returns a `Hydra.Spec` struct containing the parsed OpenAPI specification.
+  Returns a `Portico.Spec` struct containing the parsed OpenAPI specification.
 
   ## Examples
 
       # Parse from remote URL (requires network access)
-      spec = Hydra.parse!("https://api.example.com/openapi.json")
-      spec = Hydra.parse!("https://api.example.com/openapi.yaml")
+      spec = Portico.parse!("https://api.example.com/openapi.json")
+      spec = Portico.parse!("https://api.example.com/openapi.yaml")
 
       # Parse from local file
-      spec = Hydra.parse!("./specs/petstore.json")
-      spec = Hydra.parse!("./specs/petstore.yaml")
+      spec = Portico.parse!("./specs/petstore.json")
+      spec = Portico.parse!("./specs/petstore.yaml")
 
   ## Raises
 
@@ -67,7 +67,7 @@ defmodule Hydra do
 
   def parse!("https://" <> _ = url) do
     url
-    |> Hydra.Fetch.fetch()
+    |> Portico.Fetch.fetch()
     |> do_parse!()
   end
 
@@ -79,8 +79,8 @@ defmodule Hydra do
   defp do_parse!(content) do
     content
     |> parse_content()
-    |> Hydra.Spec.Resolver.resolve()
-    |> Hydra.Spec.parse()
+    |> Portico.Spec.Resolver.resolve()
+    |> Portico.Spec.parse()
   end
 
   defp path_to_content_type(path) do

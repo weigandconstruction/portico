@@ -1,11 +1,11 @@
-defmodule Mix.Tasks.Hydra.Generate do
+defmodule Mix.Tasks.Portico.Generate do
   @shortdoc "Generate APIs from an OpenAPI spec"
   @moduledoc """
   Generate APIs from an OpenAPI spec.
 
   ## Options
 
-    * `--config` - Path to a Hydra config file (when used, no other options are allowed)
+    * `--config` - Path to a Portico config file (when used, no other options are allowed)
     * `--module` - The name of the API client module (required when not using --config)
     * `--spec` - The URL or file path to the OpenAPI specification (required when not using --config)
     * `--tag` - Generate APIs only for operations with this specific tag
@@ -13,13 +13,13 @@ defmodule Mix.Tasks.Hydra.Generate do
   ## Examples
 
       # Generate using a config file
-      mix hydra.generate --config hydra.config.json
+      mix portico.generate --config portico.config.json
 
       # Generate all APIs without config
-      mix hydra.generate --module MyAPI --spec https://api.example.com/openapi.json
+      mix portico.generate --module MyAPI --spec https://api.example.com/openapi.json
 
       # Generate APIs only for operations tagged with "users"
-      mix hydra.generate --module MyAPI --spec spec.json --tag users
+      mix portico.generate --module MyAPI --spec spec.json --tag users
 
   ## Config File Format
 
@@ -92,7 +92,7 @@ defmodule Mix.Tasks.Hydra.Generate do
   end
 
   defp generate(opts) do
-    spec = Hydra.parse!(opts[:spec])
+    spec = Portico.parse!(opts[:spec])
 
     # Parse tag filters from CLI options or config file
     tag_filters = parse_tag_filters(opts)
@@ -103,7 +103,7 @@ defmodule Mix.Tasks.Hydra.Generate do
   end
 
   defp copy_client(opts) do
-    source_path = Path.join(:code.priv_dir(:hydra), "templates/client.ex.eex")
+    source_path = Path.join(:code.priv_dir(:portico), "templates/client.ex.eex")
 
     if File.exists?(source_path) do
       copy_template(source_path, "lib/#{opts[:name]}/client.ex", opts, format_elixir: true)
@@ -112,7 +112,7 @@ defmodule Mix.Tasks.Hydra.Generate do
 
   defp generate_api_modules(spec, opts, tag_filters) do
     # Group operations by tags
-    grouped_operations = Hydra.Helpers.group_operations_by_tag(spec.paths)
+    grouped_operations = Portico.Helpers.group_operations_by_tag(spec.paths)
 
     # Filter operations by tags if filters are provided
     filtered_operations =
@@ -132,13 +132,13 @@ defmodule Mix.Tasks.Hydra.Generate do
     {filename, module_name} =
       if String.starts_with?(tag, "/") do
         # This is a path fallback (no tags were present)
-        name = Hydra.Helpers.friendly_name(tag)
-        module_name = Hydra.Helpers.module_name(tag)
+        name = Portico.Helpers.friendly_name(tag)
+        module_name = Portico.Helpers.module_name(tag)
         {name, module_name}
       else
         # This is a proper tag
-        filename = Hydra.Helpers.tag_to_filename(tag)
-        module_name = Hydra.Helpers.tag_to_module_name(tag)
+        filename = Portico.Helpers.tag_to_filename(tag)
+        module_name = Portico.Helpers.tag_to_module_name(tag)
         {filename, module_name}
       end
 
@@ -148,7 +148,7 @@ defmodule Mix.Tasks.Hydra.Generate do
       |> Keyword.put(:tag, tag)
       |> Keyword.put(:path_operations, path_operations)
 
-    source_path = Path.join(:code.priv_dir(:hydra), "templates/api.ex.eex")
+    source_path = Path.join(:code.priv_dir(:portico), "templates/api.ex.eex")
 
     if File.exists?(source_path) do
       copy_template(source_path, "lib/#{opts[:name]}/api/#{filename}.ex", opts,

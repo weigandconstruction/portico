@@ -1,7 +1,7 @@
-defmodule Hydra.Spec.ResponseTest do
+defmodule Portico.Spec.ResponseTest do
   use ExUnit.Case, async: true
 
-  alias Hydra.Spec.Response
+  alias Portico.Spec.Response
 
   describe "parse/1" do
     test "parses a minimal response with only description" do

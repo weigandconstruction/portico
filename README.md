@@ -1,6 +1,6 @@
-# Hydra – Elixir OpenAPI 3.0 Generator
+# Portico – Elixir OpenAPI 3.0 Generator
 
-[![CI](https://github.com/weigandconstruction/hydra/actions/workflows/ci.yml/badge.svg)](https://github.com/weigandconstruction/hydra/actions/workflows/ci.yml)
+[![CI](https://github.com/weigandconstruction/portico/actions/workflows/ci.yml/badge.svg)](https://github.com/weigandconstruction/portico/actions/workflows/ci.yml)
 
 > ⚠️ **WARNING: DEVELOPMENT VERSION** ⚠️
 >
@@ -9,9 +9,9 @@
 > Some things will just flat out not work.
 > Use at your own risk and expect breaking changes.
 
-**Hydra** is an Elixir library that generates HTTP API clients directly into your project from OpenAPI 3.0 specifications.
+**Portico** is an Elixir library that generates HTTP API clients directly into your project from OpenAPI 3.0 specifications.
 
-## 🎯 Why Hydra?
+## 🎯 Why Portico?
 
 This project was inspired by [this Dashbit blog post](https://dashbit.co/blog/sdks-with-req-stripe). As outlined in the
 post, there are some valid concerns with API clients in general:
@@ -26,8 +26,8 @@ post, there are some valid concerns with API clients in general:
 The article proposes we craft small, simple clients. This is excellent advice, but what if we need more than just a few
 API calls or have a larger number of services?
 
-Hydra solves this by giving you a lightweight, simple, and transparent solution, without requiring you to build your own
-clients. We do this by leveraging the OpenAPI 3.0 spec, Req, and code generation. With Hydra you can achieve the same
+Portico solves this by giving you a lightweight, simple, and transparent solution, without requiring you to build your own
+clients. We do this by leveraging the OpenAPI 3.0 spec, Req, and code generation. With Portico you can achieve the same
 results without the extra work.
 
 ## 🚀 Features
@@ -46,19 +46,19 @@ results without the extra work.
 
 ### Supported Versions
 
-Hydra is continuously tested against:
+Portico is continuously tested against:
 
 - **Elixir**: 1.15, 1.16, 1.17, 1.18
 - **OTP**: 24, 25, 26, 27 (compatible combinations)
 
 ## 🛠 Installation
 
-Add `hydra` to your list of dependencies in `mix.exs`:
+Add `portico` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:hydra, "~> 0.1.0"}
+    {:portico, "~> 0.1.0"}
   ]
 end
 ```
@@ -76,14 +76,14 @@ mix deps.get
 First, generate a configuration showing the tags available in your OpenAPI specification:
 
 ```bash
-# Generate config with default name (hydra.config.json)
-mix hydra.config --spec https://api.example.com/openapi.json
+# Generate config with default name (portico.config.json)
+mix portico.config --spec https://api.example.com/openapi.json
 
 # Generate config from a local spec file
-mix hydra.config --spec openapi.yaml
+mix portico.config --spec openapi.yaml
 
 # Generate config with custom name
-mix hydra.config --spec openapi.yaml --output my-api.config.json
+mix portico.config --spec openapi.yaml --output my-api.config.json
 ```
 
 This generates a config file containing all available tags:
@@ -99,7 +99,7 @@ This generates a config file containing all available tags:
 }
 ```
 
-You can curate the list of tags to only those you need. When running `mix hydra.generate --config` with a config file, Hydra will only generate
+You can curate the list of tags to only those you need. When running `mix portico.generate --config` with a config file, Portico will only generate
 operations that include these tags.
 
 ### 2. Generate an API Client
@@ -107,16 +107,16 @@ operations that include these tags.
 Generate a client with a specified configuration:
 
 ```bash
-mix hydra.generate --config path/to/config.json
+mix portico.generate --config path/to/config.json
 ```
 
 You can also use the generator without a configuration by providing extra flags:
 
 ```bash
-mix hydra.generate --module MyAPI --spec path/to/openapi.json
+mix portico.generate --module MyAPI --spec path/to/openapi.json
 
 # Specify a tag
-mix hydra.generate --module MyAPI --spec path/to/openapi.yaml --tag users
+mix portico.generate --module MyAPI --spec path/to/openapi.yaml --tag users
 ```
 
 This creates Elixir modules in your `lib/` directory. You can nest it in your application by providing the full module

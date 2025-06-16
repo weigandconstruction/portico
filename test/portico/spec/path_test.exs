@@ -1,7 +1,7 @@
-defmodule Hydra.Spec.PathTest do
+defmodule Portico.Spec.PathTest do
   use ExUnit.Case, async: true
 
-  alias Hydra.Spec.Path, as: SpecPath
+  alias Portico.Spec.Path, as: SpecPath
 
   describe "parse/1" do
     test "parses a simple path with no operations" do

@@ -1,10 +1,10 @@
-defmodule Hydra.TemplateRenderingTest do
+defmodule Portico.TemplateRenderingTest do
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO
 
-  alias Hydra.Spec.{Operation, Parameter, Response}
-  alias Hydra.Spec.Path, as: SpecPath
+  alias Portico.Spec.{Operation, Parameter, Response}
+  alias Portico.Spec.Path, as: SpecPath
 
   @moduletag :template_rendering
 
@@ -539,7 +539,7 @@ defmodule Hydra.TemplateRenderingTest do
 
   # Helper functions
   defp create_test_spec(paths) do
-    %Hydra.Spec{
+    %Portico.Spec{
       version: "3.0.0",
       info: %{"title" => "Test API", "version" => "1.0.0"},
       paths: paths
@@ -580,7 +580,7 @@ defmodule Hydra.TemplateRenderingTest do
     # Generate code in temp directory context
     File.cd!(temp_dir, fn ->
       capture_io(fn ->
-        Mix.Tasks.Hydra.Generate.run(["--module", module_name, "--spec", spec_file])
+        Mix.Tasks.Portico.Generate.run(["--module", module_name, "--spec", spec_file])
       end)
     end)
   end

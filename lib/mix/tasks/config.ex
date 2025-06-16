@@ -1,24 +1,24 @@
-defmodule Mix.Tasks.Hydra.Config do
+defmodule Mix.Tasks.Portico.Config do
   @shortdoc "Generate a configuration file from an OpenAPI spec"
   @moduledoc """
   Generate a configuration file from an OpenAPI spec.
 
   This task analyzes an OpenAPI specification and generates a JSON configuration
-  file that can be used with other Hydra tasks. The configuration includes all
+  file that can be used with other Portico tasks. The configuration includes all
   available tags and can be extended in the future to include other options.
 
   ## Options
 
     * `--spec` - The URL or file path to the OpenAPI specification (required)
-    * `--output` - Path for the output config file (defaults to "hydra.config.json")
+    * `--output` - Path for the output config file (defaults to "portico.config.json")
 
   ## Examples
 
       # Generate config file with default name
-      mix hydra.config --spec https://api.example.com/openapi.json
+      mix portico.config --spec https://api.example.com/openapi.json
 
       # Generate config file with custom name
-      mix hydra.config --spec spec.json --output my-config.json
+      mix portico.config --spec spec.json --output my-config.json
 
   ## Generated Config Format
 
@@ -35,7 +35,7 @@ defmodule Mix.Tasks.Hydra.Config do
 
   This config file can then be used with the generate task:
 
-      mix hydra.generate --config my-config.json
+      mix portico.generate --config my-config.json
 
   """
 
@@ -53,12 +53,12 @@ defmodule Mix.Tasks.Hydra.Config do
 
     opts[:spec] || raise "You must provide a spec using --spec"
 
-    output_file = opts[:output] || "hydra.config.json"
+    output_file = opts[:output] || "portico.config.json"
     generate_config(opts[:spec], output_file)
   end
 
   defp generate_config(spec_path, output_file) do
-    spec = Hydra.parse!(spec_path)
+    spec = Portico.parse!(spec_path)
 
     config = %{
       spec_info: extract_spec_info(spec, spec_path),

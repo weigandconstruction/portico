@@ -1,19 +1,19 @@
-defmodule Hydra.Spec.Path do
+defmodule Portico.Spec.Path do
   @moduledoc """
-  Represents a path in the Hydra specification.
+  Represents a path in the Portico specification.
   A path is a specific endpoint in the API that can be accessed using various HTTP methods.
   It includes the path string, a list of operations (HTTP methods), and parameters that can be used with every
   operation on that path.
 
   Each operation can have its own parameters, but the path can also define parameters that are common to all operations.
 
-  See Hydra.Spec.Operation and Hydra.Spec.Parameter for more details on operations and parameters.
+  See Portico.Spec.Operation and Portico.Spec.Parameter for more details on operations and parameters.
   """
 
   @type t() :: %__MODULE__{
           path: String.t(),
-          operations: [Hydra.Spec.Operation.t()],
-          parameters: [Hydra.Spec.Parameter.t()]
+          operations: [Portico.Spec.Operation.t()],
+          parameters: [Portico.Spec.Parameter.t()]
         }
 
   defstruct [
@@ -26,7 +26,7 @@ defmodule Hydra.Spec.Path do
   Parses a path from the OpenAPI 3.0 specification.
 
   This function takes a tuple with the path string and a map containing the operations and parameters,
-  and returns a `Hydra.Spec.Path` struct.
+  and returns a `Portico.Spec.Path` struct.
   """
   @spec parse({String.t(), map()}) :: t()
   def parse({path, body}) do
@@ -35,7 +35,7 @@ defmodule Hydra.Spec.Path do
     %__MODULE__{
       path: path,
       operations: parse_operations(body),
-      parameters: Enum.map(parameters, &Hydra.Spec.Parameter.parse/1)
+      parameters: Enum.map(parameters, &Portico.Spec.Parameter.parse/1)
     }
   end
 
@@ -49,7 +49,7 @@ defmodule Hydra.Spec.Path do
         # Get the operation for the method
         operation = body[method]
         operation = Map.put(operation, "method", method)
-        [Hydra.Spec.Operation.parse(operation) | acc]
+        [Portico.Spec.Operation.parse(operation) | acc]
       else
         acc
       end

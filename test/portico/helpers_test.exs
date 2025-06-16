@@ -1,11 +1,11 @@
-defmodule Hydra.HelpersTest do
+defmodule Portico.HelpersTest do
   use ExUnit.Case, async: true
 
-  alias Hydra.Helpers
-  alias Hydra.Spec.Operation
-  alias Hydra.Spec.Path, as: SpecPath
+  alias Portico.Helpers
+  alias Portico.Spec.Operation
+  alias Portico.Spec.Path, as: SpecPath
 
-  doctest Hydra.Helpers
+  doctest Portico.Helpers
 
   describe "friendly_name/1" do
     test "handles basic paths" do
@@ -318,7 +318,7 @@ defmodule Hydra.HelpersTest do
   end
 
   describe "interpolated_path_with_params/2" do
-    alias Hydra.Spec.Parameter
+    alias Portico.Spec.Parameter
 
     test "interpolates single path parameter with snake_case conversion" do
       path = "/assets/{assetId}"
@@ -492,7 +492,7 @@ defmodule Hydra.HelpersTest do
   end
 
   describe "function_typespec/3" do
-    alias Hydra.Spec.Parameter
+    alias Portico.Spec.Parameter
 
     test "generates typespec for function with no parameters" do
       path = %SpecPath{path: "/users", parameters: []}

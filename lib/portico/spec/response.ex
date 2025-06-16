@@ -1,4 +1,4 @@
-defmodule Hydra.Spec.Response do
+defmodule Portico.Spec.Response do
   @moduledoc """
   Represents a response in the OpenAPI 3.0 specification.
 
@@ -23,7 +23,7 @@ defmodule Hydra.Spec.Response do
 
   @doc """
   Parses a response from the OpenAPI 3.0 specification.
-  This function takes a map containing the response details and returns a `Hydra.Spec.Response` struct.
+  This function takes a map containing the response details and returns a `Portico.Spec.Response` struct.
   """
   @spec parse(map()) :: t()
   def parse(response) do

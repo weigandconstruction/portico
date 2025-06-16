@@ -1,7 +1,7 @@
-defmodule Hydra.SpecTest do
+defmodule Portico.SpecTest do
   use ExUnit.Case, async: true
 
-  alias Hydra.Spec
+  alias Portico.Spec
 
   describe "parse/1" do
     test "parses a minimal OpenAPI spec" do
@@ -114,7 +114,7 @@ defmodule Hydra.SpecTest do
       assert spec.external_docs == nil
     end
 
-    test "parses paths into Hydra.Spec.Path structs" do
+    test "parses paths into Portico.Spec.Path structs" do
       json = %{
         "openapi" => "3.0.0",
         "info" => %{},
@@ -143,7 +143,7 @@ defmodule Hydra.SpecTest do
       spec = Spec.parse(json)
 
       assert length(spec.paths) == 2
-      assert Enum.all?(spec.paths, &is_struct(&1, Hydra.Spec.Path))
+      assert Enum.all?(spec.paths, &is_struct(&1, Portico.Spec.Path))
 
       paths_by_path = Enum.into(spec.paths, %{}, fn path -> {path.path, path} end)
       assert Map.has_key?(paths_by_path, "/users")

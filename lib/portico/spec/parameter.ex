@@ -1,6 +1,6 @@
-defmodule Hydra.Spec.Parameter do
+defmodule Portico.Spec.Parameter do
   @moduledoc """
-  Represents a parameter in the Hydra specification.
+  Represents a parameter in the Portico specification.
   A parameter is a piece of data that can be passed to an API endpoint.
   It includes details such as the parameter name, location (in, path, query, header, cookie),
   description, schema, content, style, and whether it is required or deprecated.
@@ -40,7 +40,7 @@ defmodule Hydra.Spec.Parameter do
 
   @doc """
   Parses a parameter from the OpenAPI 3.0 specification.
-  This function takes a parameter map and returns a `Hydra.Spec.Parameter` struct.
+  This function takes a parameter map and returns a `Portico.Spec.Parameter` struct.
   """
   @spec parse(map()) :: t()
   def parse(parameter) do

@@ -1,7 +1,7 @@
-defmodule Hydra.Spec do
+defmodule Portico.Spec do
   @moduledoc """
   Represents the OpenAPI 3.0 specification for an API.
-  The Hydra.Spec module provides a structure to hold the OpenAPI specification,
+  The Portico.Spec module provides a structure to hold the OpenAPI specification,
   including metadata about the API, paths, servers, components, security schemes, tags, and external documentation.
   It also includes functions to parse the OpenAPI JSON into a structured format.
   """
@@ -9,7 +9,7 @@ defmodule Hydra.Spec do
   @type t() :: %__MODULE__{
           version: String.t(),
           info: map(),
-          paths: [Hydra.Spec.Path.t()],
+          paths: [Portico.Spec.Path.t()],
           servers: list(),
           components: map(),
           security: list(),
@@ -30,14 +30,14 @@ defmodule Hydra.Spec do
 
   @doc """
   Parses the OpenAPI 3.0 specification from a JSON object.
-  This function takes a JSON object representing the OpenAPI specification and returns a `Hydra.Spec` struct.
+  This function takes a JSON object representing the OpenAPI specification and returns a `Portico.Spec` struct.
   """
   @spec parse(map()) :: t()
   def parse(json) do
     %__MODULE__{
       version: json["openapi"],
       info: json["info"],
-      paths: Enum.map(json["paths"], &Hydra.Spec.Path.parse/1),
+      paths: Enum.map(json["paths"], &Portico.Spec.Path.parse/1),
       servers: json["servers"],
       components: json["components"],
       security: json["security"],

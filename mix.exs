@@ -1,9 +1,9 @@
-defmodule Hydra.MixProject do
+defmodule Portico.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :hydra,
+      app: :portico,
       version: "0.1.0",
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,

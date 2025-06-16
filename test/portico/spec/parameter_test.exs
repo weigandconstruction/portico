@@ -1,7 +1,7 @@
-defmodule Hydra.Spec.ParameterTest do
+defmodule Portico.Spec.ParameterTest do
   use ExUnit.Case, async: true
 
-  alias Hydra.Spec.Parameter
+  alias Portico.Spec.Parameter
 
   describe "parse/1" do
     test "parses a minimal parameter" do
