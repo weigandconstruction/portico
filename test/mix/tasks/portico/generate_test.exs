@@ -399,6 +399,72 @@ defmodule Mix.Tasks.Portico.GenerateTest do
     end
   end
 
+  describe "config-based generation" do
+    test "generates client with default base URL from config", %{temp_dir: temp_dir} do
+      # Create a spec with servers
+      spec_with_servers =
+        Map.put(@test_spec_json, "servers", [
+          %{"url" => "https://api.test.com"},
+          %{"url" => "https://staging.test.com"}
+        ])
+
+      spec_file = Path.join(temp_dir, "spec_with_servers.json")
+      File.write!(spec_file, Jason.encode!(spec_with_servers))
+
+      # Generate config
+      config_file = Path.join(temp_dir, "test.config.json")
+
+      capture_io(fn ->
+        Mix.Tasks.Portico.Config.run(["--spec", spec_file, "--output", config_file])
+      end)
+
+      File.cd!(temp_dir, fn ->
+        capture_io(fn ->
+          Mix.Tasks.Portico.Generate.run(["--config", config_file])
+        end)
+
+        client_file = "lib/test_api/client.ex"
+        assert File.exists?(client_file)
+
+        content = File.read!(client_file)
+        # Should have default base URL
+        assert content =~ "@default_base_url \"https://api.test.com\""
+        # Should have new/1 function that uses default
+        assert content =~ "def new(options \\\\ []) when is_list(options)"
+        assert content =~ "Keyword.put_new(options, :base_url, @default_base_url)"
+      end)
+    end
+
+    test "generates client without default base URL when not in config", %{temp_dir: temp_dir} do
+      # Create a spec without servers
+      spec_file = Path.join(temp_dir, "spec_no_servers.json")
+      File.write!(spec_file, Jason.encode!(@test_spec_json))
+
+      # Generate config
+      config_file = Path.join(temp_dir, "test_no_url.config.json")
+
+      capture_io(fn ->
+        Mix.Tasks.Portico.Config.run(["--spec", spec_file, "--output", config_file])
+      end)
+
+      File.cd!(temp_dir, fn ->
+        capture_io(fn ->
+          Mix.Tasks.Portico.Generate.run(["--config", config_file])
+        end)
+
+        client_file = "lib/test_api/client.ex"
+        assert File.exists?(client_file)
+
+        content = File.read!(client_file)
+        # Should not have default base URL
+        refute content =~ "@default_base_url"
+        # Should have new/1 function that requires base_url
+        assert content =~ "def new(options) when is_list(options)"
+        assert content =~ "base_url is required"
+      end)
+    end
+  end
+
   describe "error handling" do
     test "handles missing spec file gracefully" do
       assert_raise File.Error, fn ->

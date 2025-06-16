@@ -70,6 +70,7 @@ defmodule Mix.Tasks.Portico.Generate do
       |> Keyword.put(:spec, config["spec_info"]["source"])
       |> Keyword.put(:name, Macro.underscore(config["spec_info"]["module"]))
       |> Keyword.put(:tags, config["tags"])
+      |> Keyword.put(:base_url, config["base_url"])
     else
       # Traditional usage - require module and spec
       opts[:module] || raise "You must provide a name for the API client using --module"
@@ -106,6 +107,8 @@ defmodule Mix.Tasks.Portico.Generate do
     source_path = Path.join(:code.priv_dir(:portico), "templates/client.ex.eex")
 
     if File.exists?(source_path) do
+      # Ensure base_url is always present in opts (even if nil)
+      opts = Keyword.put_new(opts, :base_url, nil)
       copy_template(source_path, "lib/#{opts[:name]}/client.ex", opts, format_elixir: true)
     end
   end

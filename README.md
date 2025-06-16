@@ -74,7 +74,7 @@ mix deps.get
 
 ### 1. Generate a Configuration
 
-First, generate a configuration showing the tags available in your OpenAPI specification:
+First, generate a configuration file for your OpenAPI specification:
 
 ```bash
 # Generate config with default name (portico.config.json)
@@ -87,7 +87,11 @@ mix portico.config --spec openapi.yaml
 mix portico.config --spec openapi.yaml --output my-api.config.json
 ```
 
-This generates a config file containing all available tags:
+This generates a config file containing:
+
+- **spec_info**: Metadata about the API specification
+- **base_url**: The default server URL from the OpenAPI spec (if available)
+- **tags**: All available tags from the specification
 
 ```json
 {
@@ -96,12 +100,19 @@ This generates a config file containing all available tags:
     "title": "My API",
     "module": "ServiceName.API"
   },
+  "base_url": "https://api.example.com",
   "tags": ["users", "orders", "products", "authentication"]
 }
 ```
 
-You can curate the list of tags to only those you need. When running `mix portico.generate --config` with a config file, Portico will only generate
-operations that include these tags.
+You can edit this file and commit it to version control.
+
+When running `mix portico.generate --config` with a config file, Portico will:
+
+- Use the module name as the base module (and path) for the generated client (e.g. `ServiceName.API` will generate
+  the client code in `lib/service_name/api/*` with namespace `ServiceName.API.*`)
+- Only generate operations that include the listed tags
+- Use the `base_url` as the default for the generated client (can be overridden at runtime)
 
 ### 2. Generate an API Client
 
@@ -120,20 +131,35 @@ mix portico.generate --module MyAPI --spec path/to/openapi.json
 mix portico.generate --module MyAPI --spec path/to/openapi.yaml --tag users
 ```
 
-This creates Elixir modules in your `lib/` directory. You can nest it in your application by providing the full module
-namespace – e.g. `MyApp.ServiceName.API`.
+Note, some features like default `base_url` require use of a config file. It is recommended that you use a config.
 
 ### 3. Use Your Generated Client
 
-Authentication and usage will vary by API. A simple bearer token authentication may be used as shown below.
+The generated client supports flexible configuration with automatic base URL detection from your OpenAPI spec.
 
 ```elixir
-# Create client with bearer token authentication (note, the provided options are just Req options)
-client = MyAPI.Client.new("https://api.example.com", auth: {:bearer, "your-token"})
+# When generated from a config with base_url, the URL is optional
+client = MyAPI.Client.new()
+client = MyAPI.Client.new(auth: {:bearer, "your-token"})
 
-# Make an API call using generated module
+# Override the base URL for different environments
+staging = MyAPI.Client.new(base_url: "https://staging.example.com", auth: {:bearer, "staging-token"})
+prod = MyAPI.Client.new(base_url: "https://api.example.com", auth: {:bearer, "prod-token"})
+
+# When generated without a base_url, you must provide it
+client = MyAPI.Client.new(base_url: "https://api.example.com", auth: {:bearer, "your-token"})
+
+# Make API calls using generated modules
 case MyAPI.Users.get_user(client, "user123") do
   {:ok, user} -> IO.inspect(user)
   {:error, exception} -> IO.puts("Error: #{exception.message}")
 end
+
+# All Req options are supported
+client = MyAPI.Client.new(
+  auth: {:bearer, "token"},
+  timeout: 30_000,
+  retry: :transient,
+  plug: {MyApp.RequestLogger, []}
+)
 ```

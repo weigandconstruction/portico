@@ -58,23 +58,28 @@ Generated clients include:
 ### Usage Example
 
 ```elixir
-# Create client with authentication
-client = MyAPI.Client.new("https://api.example.com", auth: {:bearer, "your-token"})
+# When generated from a config with base_url:
+# Uses default base URL from the OpenAPI spec
+client = MyAPI.Client.new()
+client = MyAPI.Client.new(auth: {:bearer, "your-token"})
+
+# Override the base URL
+client = MyAPI.Client.new(base_url: "https://staging.example.com", auth: {:bearer, "staging-token"})
+
+# When generated without a base_url in config:
+# Must provide base_url
+client = MyAPI.Client.new(base_url: "https://api.example.com", auth: {:bearer, "your-token"})
 
 # Make API calls (returns {:ok, response} or {:error, exception})
 {:ok, users} = MyAPI.Users.list_users(client)
 {:ok, post} = MyAPI.Posts.create_post(client, %{title: "Hello", body: "World"})
 
-# Different environments
-staging_client = MyAPI.Client.new("https://staging.example.com", auth: {:bearer, "staging-token"})
-prod_client = MyAPI.Client.new("https://api.example.com", auth: {:bearer, "prod-token"})
-
 # With additional options
-client = MyAPI.Client.new("https://api.example.com", [
+client = MyAPI.Client.new(
   auth: {:bearer, "token"},
   timeout: 30_000,
   retry: :transient
-])
+)
 ```
 
 ## Workflow Reminders

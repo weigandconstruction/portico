@@ -30,6 +30,7 @@ defmodule Mix.Tasks.Portico.Config do
           "title": "My API",
           "module": "ServiceName"
         },
+        "base_url": "https://api.example.com",
         "tags": ["users", "posts", "comments"]
       }
 
@@ -62,6 +63,7 @@ defmodule Mix.Tasks.Portico.Config do
 
     config = %{
       spec_info: extract_spec_info(spec, spec_path),
+      base_url: extract_base_url(spec),
       tags: extract_unique_tags(spec)
     }
 
@@ -94,11 +96,20 @@ defmodule Mix.Tasks.Portico.Config do
     }
   end
 
+  defp extract_base_url(spec) do
+    case spec.servers do
+      [%{"url" => url} | _] -> url
+      _ -> nil
+    end
+  end
+
   defp generate_module_name(title) do
     # Convert title to a valid Elixir module name
     name =
       title
-      # Remove special characters
+      # Replace dashes and underscores with spaces for proper word splitting
+      |> String.replace(~r/[-_]/, " ")
+      # Remove other special characters
       |> String.replace(~r/[^\w\s]/, "")
       # Split on whitespace
       |> String.split(~r/\s+/)

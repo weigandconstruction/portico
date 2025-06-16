@@ -32,28 +32,73 @@ defmodule <%= @module %>.Client do
     end
   end
 
+<%= if @base_url do %>  @default_base_url "<%= @base_url %>"
+
   @doc """
-  Creates a new client with the given base URL and authentication.
+  Creates a new client with the given options.
 
   ## Examples
 
-      # Bearer token
-      client = <%= @module %>.Client.new("https://api.example.com", auth: {:bearer, "your-token"})
+      # Using default base URL
+      client = <%= @module %>.Client.new()
 
-      # Basic auth
-      client = <%= @module %>.Client.new("https://api.example.com", auth: {:basic, "user:pass"})
+      # With authentication using default URL
+      client = <%= @module %>.Client.new(auth: {:bearer, "your-token"})
+
+      # Override base URL
+      client = <%= @module %>.Client.new(base_url: "https://staging.example.com")
+
+      # Override base URL with auth
+      client = <%= @module %>.Client.new(
+        base_url: "https://staging.example.com",
+        auth: {:bearer, "staging-token"}
+      )
 
       # With additional options
       client = <%= @module %>.Client.new(
-        "https://api.example.com",
-        [timeout: 30_000, auth: {:bearer, "token"}]
+        timeout: 30_000,
+        auth: {:bearer, "token"},
+        retry: :transient
       )
 
   """
-  @spec new(String.t(), keyword()) :: Req.Request.t()
-  def new(base_url, options \\ []) when is_binary(base_url) and is_list(options) do
-    Req.new([base_url: base_url] ++ options)
-  end
+  @spec new(keyword()) :: Req.Request.t()
+  def new(options \\ []) when is_list(options) do
+    options = Keyword.put_new(options, :base_url, @default_base_url)
+    Req.new(options)
+  end<% else %>  @doc """
+  Creates a new client with the given options.
+
+  ## Examples
+
+      # With base URL and auth
+      client = <%= @module %>.Client.new(
+        base_url: "https://api.example.com",
+        auth: {:bearer, "your-token"}
+      )
+
+      # Basic auth
+      client = <%= @module %>.Client.new(
+        base_url: "https://api.example.com",
+        auth: {:basic, "user:pass"}
+      )
+
+      # With additional options
+      client = <%= @module %>.Client.new(
+        base_url: "https://api.example.com",
+        timeout: 30_000,
+        auth: {:bearer, "token"}
+      )
+
+  """
+  @spec new(keyword()) :: Req.Request.t()
+  def new(options) when is_list(options) do
+    unless Keyword.has_key?(options, :base_url) do
+      raise ArgumentError, "base_url is required"
+    end
+    
+    Req.new(options)
+  end<% end %>
 
   @doc """
   Makes an HTTP request using the provided client.
