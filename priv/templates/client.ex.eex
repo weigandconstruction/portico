@@ -82,14 +82,10 @@ defmodule <%= @module %>.Client do
   """
   @spec new(keyword()) :: Req.Request.t()
   def new(options \\ []) when is_list(options) do
-    config_options = Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
-    
-    options =
-      config_options
-      |> Keyword.merge(options)
-      |> Keyword.put_new(:base_url, @default_base_url)
-      
-    Req.new(options)
+    Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
+    |> Keyword.merge(options)
+    |> Keyword.put_new(:base_url, @default_base_url)
+    |> Req.new()
   end<% else %>  @doc """
   Creates a new client with the given options.
 
@@ -136,9 +132,9 @@ defmodule <%= @module %>.Client do
   """
   @spec new(keyword()) :: Req.Request.t()
   def new(options) when is_list(options) do
-    config_options = Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
-    
-    options = Keyword.merge(config_options, options)
+    options = 
+      Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
+      |> Keyword.merge(options)
     
     unless Keyword.has_key?(options, :base_url) do
       raise ArgumentError, "base_url is required"
