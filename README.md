@@ -170,14 +170,14 @@ You can optionally set default client options in your application config. This i
 
 ```elixir
 # config/test.exs
-config :my_api,
-  client: [
+config :my_app,
+  my_api: [
     plug: {Req.Test, MyApp.MockServer}
   ]
 
 # config/dev.exs
-config :my_api,
-  client: [
+config :my_app,
+  my_api: [
     retry: false,
     cache: true,
     pool_timeout: 5000

@@ -48,6 +48,26 @@ defmodule Portico.Helpers do
   end
 
   @doc """
+  Converts a module name to a string suitable for Application.get_env/3.
+  Handles dotted module names by converting to snake_case with underscores.
+
+  ## Examples:
+
+      iex> Portico.Helpers.module_to_config_key("Example.Procore")
+      "example_procore"
+
+      iex> Portico.Helpers.module_to_config_key("MyAPI")
+      "my_api"
+
+  """
+  @spec module_to_config_key(String.t()) :: String.t()
+  def module_to_config_key(module_name) when is_binary(module_name) do
+    module_name
+    |> Macro.underscore()
+    |> String.replace("/", "_")
+  end
+
+  @doc """
   Converts a tag string into a module name by transforming it into CamelCase.
   Handles hierarchical tags (separated by / or -) and creates a valid Elixir module name.
   Removes special characters that are not valid in module names.

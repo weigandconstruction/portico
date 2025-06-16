@@ -71,18 +71,24 @@ defmodule <%= @module %>.Client do
   You can set default options in your application config:
 
       # config/test.exs
-      config :<%= Macro.underscore(@module) %>,
-        plug: {Req.Test, MyApp.MockServer}
+      config :my_app,
+        <%= Portico.Helpers.module_to_config_key(@module) %>: [
+          plug: {Req.Test, MyApp.MockServer}
+        ]
 
       # config/dev.exs
-      config :<%= Macro.underscore(@module) %>,
-        retry: false,
-        cache: true
+      config :my_app,
+        <%= Portico.Helpers.module_to_config_key(@module) %>: [
+          retry: false,
+          cache: true
+        ]
 
   """
   @spec new(keyword()) :: Req.Request.t()
   def new(options \\ []) when is_list(options) do
-    Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
+    app = Application.get_application(__MODULE__) || :portico
+
+    Application.get_env(app, :<%= Portico.Helpers.module_to_config_key(@module) %>, [])
     |> Keyword.merge(options)
     |> Keyword.put_new(:base_url, @default_base_url)
     |> Req.new()
@@ -119,27 +125,33 @@ defmodule <%= @module %>.Client do
   You can set default options in your application config:
 
       # config/test.exs
-      config :<%= Macro.underscore(@module) %>,
-        plug: {Req.Test, MyApp.MockServer}
+      config :my_app,
+        <%= Portico.Helpers.module_to_config_key(@module) %>: [
+          plug: {Req.Test, MyApp.MockServer}
+        ]
 
       # config/dev.exs
-      config :<%= Macro.underscore(@module) %>,
-        retry: false,
-        cache: true
+      config :my_app,
+        <%= Portico.Helpers.module_to_config_key(@module) %>: [
+          retry: false,
+          cache: true
+        ]
 
   Note: base_url must still be provided in the options when creating the client.
 
   """
   @spec new(keyword()) :: Req.Request.t()
   def new(options) when is_list(options) do
-    options = 
-      Application.get_env(:<%= Macro.underscore(@module) %>, :client, [])
+    app = Application.get_application(__MODULE__) || :portico
+
+    options =
+      Application.get_env(app, :<%= Portico.Helpers.module_to_config_key(@module) %>, [])
       |> Keyword.merge(options)
-    
+
     unless Keyword.has_key?(options, :base_url) do
       raise ArgumentError, "base_url is required"
     end
-    
+
     Req.new(options)
   end<% end %>
 
