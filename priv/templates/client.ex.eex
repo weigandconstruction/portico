@@ -9,6 +9,12 @@ defmodule <%= @module %>.Client do
     """
     defexception [:status, :body, :message]
 
+    @type t :: %__MODULE__{
+            status: non_neg_integer(),
+            body: any(),
+            message: String.t()
+          }
+
     def exception({status, body}) do
       %__MODULE__{
         status: status,
@@ -23,6 +29,11 @@ defmodule <%= @module %>.Client do
     Represents a transport-level error (network, timeout, DNS, etc.).
     """
     defexception [:reason, :message]
+
+    @type t :: %__MODULE__{
+            reason: any(),
+            message: String.t()
+          }
 
     def exception(reason) do
       %__MODULE__{
