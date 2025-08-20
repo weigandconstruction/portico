@@ -406,12 +406,25 @@ defmodule Portico.Helpers do
   defp format_parameter_for_docs(%Parameter{} = param) do
     type =
       case param.schema do
-        %{"type" => type} -> type
-        _ -> "string"
+        %{"type" => "array", "items" => %{"type" => "integer"}} ->
+          "[integer()]"
+
+        %{"type" => "array", "items" => %{"type" => item_type}} ->
+          "[#{item_type}]"
+
+        %{"type" => "array"} ->
+          "list()"
+
+        %{"type" => type} ->
+          type
+
+        _ ->
+          "string"
       end
 
     %{
       name: param.internal_name,
+      original_name: param.name,
       type: type,
       description: param.description,
       required: param.required

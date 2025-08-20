@@ -97,7 +97,15 @@ defmodule Portico.Spec.ParameterTest do
         {"with.dots", "with/dots"},
         {"with[brackets]", "with_brackets"},
         {"with-multiple-dashes", "withmultipledashes"},
-        {"Mixed-Case_and.dots[brackets]", "mixed_case_and/dots_brackets"}
+        {"Mixed-Case_and.dots[brackets]", "mixed_case_and/dots_brackets"},
+        {"filters[origin_id]", "filters_origin_id"},
+        {"filters[search]", "filters_search"},
+        {"filters[created_at]", "filters_created_at"},
+        {"filters[updated_at]", "filters_updated_at"},
+        {"filters[standard_cost_code_id][]", "filters_standard_cost_code_id_"},
+        {"filters[trade_id][]", "filters_trade_id_"},
+        {"filters[id][]", "filters_id_"},
+        {"filters[parent_id][]", "filters_parent_id_"}
       ]
 
       for {input_name, expected_internal} <- test_cases do
