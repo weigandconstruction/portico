@@ -95,8 +95,7 @@ defmodule Portico.Helpers do
       |> String.replace(~r/[\/\-_&\s]+/, " ")
       |> String.replace(~r/[^a-zA-Z0-9\s]/, "")
       |> String.split()
-      |> Enum.map(&Macro.camelize/1)
-      |> Enum.join()
+      |> Enum.map_join(&Macro.camelize/1)
 
     # If the module name starts with a number, prefix it with "N"
     if Regex.match?(~r/^\d/, module_name) do
