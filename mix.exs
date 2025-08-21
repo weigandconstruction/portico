@@ -24,6 +24,7 @@ defmodule Portico.MixProject do
       {:req, "~> 0.5"},
       {:jason, "~> 1.4"},
       {:yaml_elixir, "~> 2.11"},
+      {:ecto, "~> 3.11", optional: true},
       {:briefly, "~> 0.3", only: :test}
     ]
   end

@@ -1,0 +1,61 @@
+defmodule <%= @module %>.Models.<%= @model_name %> do
+  @moduledoc """
+  <%= @schema.description || "Generated model from OpenAPI schema" %>
+  <%= if length(@field_docs) > 0 do %>
+  ## Fields
+
+  <%= for {field_name, type_str, description} <- @field_docs do %>* `<%= field_name %>` (`<%= type_str %>`) - <%= description || "No description available" %>
+  <% end %><% end %>
+  """
+
+  use Ecto.Schema
+  import Ecto.Changeset
+  alias Portico.Runtime.ModelHelpers
+
+  @type t :: %__MODULE__{}
+
+  @primary_key false
+  embedded_schema do<%= for {field_name, ecto_type, _json_name} <- @ecto_fields do %>
+    field :<%= field_name %>, <%= inspect(ecto_type) %><% end %><%= for {field_name, module_name, cardinality} <- @embedded_fields do %>
+    <%= cardinality %> :<%= field_name %>, <%= module_name %><% end %>
+  end
+
+  @doc """
+  Creates a changeset for the embedded schema.
+  """
+  def changeset(struct, params) do
+    struct
+    |> cast(params, [<%= @cast_fields |> Enum.map(&inspect/1) |> Enum.join(", ") %>])<%= if length(@embedded_fields) > 0 do %>
+    <%= for {field_name, _module, _cardinality} <- @embedded_fields do %>|> cast_embed(:<%= field_name %>)
+    <% end %><% end %>
+  end
+
+  @doc """
+  Converts JSON data to a struct with type casting via Ecto changesets.
+  Returns the struct directly (not a changeset).
+  """
+  @spec from_json(map() | nil) :: t() | nil
+  def from_json(nil), do: nil
+
+  def from_json(params) when is_map(params) do
+    # Convert string keys to atoms for the fields we care about
+    params = ModelHelpers.normalize_params(params)
+
+    %__MODULE__{}
+    |> cast(params, [<%= @cast_fields |> Enum.map(&inspect/1) |> Enum.join(", ") %>])<%= if length(@embedded_fields) > 0 do %>
+    <%= for {field_name, _module, _cardinality} <- @embedded_fields do %>|> cast_embed(:<%= field_name %>)
+    <% end %><% end %>
+    |> ModelHelpers.apply_changeset_permissively()
+  end
+
+  @doc """
+  Converts the struct to a JSON-encodable map.
+  """
+  @spec to_json(t()) :: map()
+  def to_json(%__MODULE__{} = struct) do
+    <%= if @field_mappings != [] do %>custom_mappings = %{<%= for {json_name, field_name} <- @field_mappings do %>
+      :<%= field_name %> => "<%= json_name %>",<% end %>
+    }
+    ModelHelpers.struct_to_json(struct, custom_mappings)<% else %>ModelHelpers.struct_to_json(struct)<% end %>
+  end
+end
