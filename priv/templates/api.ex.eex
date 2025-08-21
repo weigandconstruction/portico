@@ -3,7 +3,7 @@ defmodule <%= @module %>.<%= @local_module %> do
   API for <%= @local_module %>
   """
 
-  <%= for {path, operation} <- @path_operations do %>
+  <%= for {path, operation} <- @path_operations do %><% response_model = Portico.Helpers.get_response_model(operation, @module, @generate_models) %>
     @doc """
     <%= operation.description %>
 
@@ -53,6 +53,9 @@ end) |> Enum.join("\n") %>
 
         <%= if Portico.Helpers.has_request_body?(operation) do %>
           json: body,
+        <% end %>
+        <%= if response_model do %>
+          model: <%= response_model %>,
         <% end %>
       )
     end
