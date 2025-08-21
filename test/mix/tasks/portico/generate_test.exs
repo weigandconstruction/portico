@@ -468,6 +468,304 @@ defmodule Mix.Tasks.Portico.GenerateTest do
     end
   end
 
+  describe "tag filtering for models" do
+    test "generates only inline models for filtered tags", %{temp_dir: temp_dir} do
+      # Create spec with multiple tags and both inline and component schemas
+      spec_with_models = %{
+        "openapi" => "3.0.0",
+        "info" => %{"title" => "Test", "version" => "1.0"},
+        "servers" => [%{"url" => "https://api.example.com"}],
+        "paths" => %{
+          "/pets" => %{
+            "get" => %{
+              "tags" => ["pets"],
+              "operationId" => "listPets",
+              "responses" => %{
+                "200" => %{
+                  "description" => "List of pets",
+                  "content" => %{
+                    "application/json" => %{
+                      "schema" => %{
+                        "type" => "object",
+                        "properties" => %{
+                          "pets" => %{
+                            "type" => "array",
+                            "items" => %{"$ref" => "#/components/schemas/Pet"}
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "post" => %{
+              "tags" => ["pets"],
+              "operationId" => "createPet",
+              "requestBody" => %{
+                "content" => %{
+                  "application/json" => %{
+                    "schema" => %{
+                      "type" => "object",
+                      "properties" => %{
+                        "name" => %{"type" => "string"},
+                        "type" => %{"type" => "string"}
+                      },
+                      "required" => ["name"]
+                    }
+                  }
+                }
+              },
+              "responses" => %{
+                "201" => %{
+                  "description" => "Pet created",
+                  "content" => %{
+                    "application/json" => %{
+                      "schema" => %{
+                        "type" => "object",
+                        "properties" => %{
+                          "id" => %{"type" => "integer"},
+                          "name" => %{"type" => "string"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/users" => %{
+            "get" => %{
+              "tags" => ["users"],
+              "operationId" => "listUsers",
+              "responses" => %{
+                "200" => %{
+                  "description" => "List of users",
+                  "content" => %{
+                    "application/json" => %{
+                      "schema" => %{
+                        "type" => "object",
+                        "properties" => %{
+                          "users" => %{
+                            "type" => "array",
+                            "items" => %{"$ref" => "#/components/schemas/User"}
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "post" => %{
+              "tags" => ["users"],
+              "operationId" => "createUser",
+              "requestBody" => %{
+                "content" => %{
+                  "application/json" => %{
+                    "schema" => %{
+                      "type" => "object",
+                      "properties" => %{
+                        "email" => %{"type" => "string"},
+                        "name" => %{"type" => "string"}
+                      },
+                      "required" => ["email"]
+                    }
+                  }
+                }
+              },
+              "responses" => %{
+                "201" => %{
+                  "description" => "User created",
+                  "content" => %{
+                    "application/json" => %{
+                      "schema" => %{
+                        "type" => "object",
+                        "properties" => %{
+                          "id" => %{"type" => "integer"},
+                          "email" => %{"type" => "string"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "components" => %{
+          "schemas" => %{
+            "Pet" => %{
+              "type" => "object",
+              "properties" => %{
+                "id" => %{"type" => "integer"},
+                "name" => %{"type" => "string"},
+                "type" => %{"type" => "string"}
+              }
+            },
+            "User" => %{
+              "type" => "object",
+              "properties" => %{
+                "id" => %{"type" => "integer"},
+                "email" => %{"type" => "string"},
+                "name" => %{"type" => "string"}
+              }
+            }
+          }
+        }
+      }
+
+      spec_file = Path.join(temp_dir, "spec_with_models.json")
+      File.write!(spec_file, Jason.encode!(spec_with_models))
+
+      # Create config with tag filter
+      config = %{
+        "spec_info" => %{
+          "module" => "FilteredAPI",
+          "title" => "Filtered API",
+          "source" => spec_file
+        },
+        "base_url" => "https://api.example.com",
+        "tags" => ["pets"]
+      }
+
+      config_file = Path.join(temp_dir, "filtered.config.json")
+      File.write!(config_file, Jason.encode!(config))
+
+      File.cd!(temp_dir, fn ->
+        output =
+          capture_io(fn ->
+            Mix.Tasks.Portico.Generate.run(["--config", config_file])
+          end)
+
+        # Check that pet API was generated
+        assert File.exists?("lib/filtered_api/api/pets.ex")
+
+        # Check that pet inline models were generated
+        assert File.exists?("lib/filtered_api/models/create_pet_request.ex")
+        assert File.exists?("lib/filtered_api/models/create_pet_response201.ex")
+        assert File.exists?("lib/filtered_api/models/list_pets_response.ex")
+
+        # Check that user API was NOT generated
+        refute File.exists?("lib/filtered_api/api/users.ex")
+
+        # Check that user inline models were NOT generated
+        refute File.exists?("lib/filtered_api/models/create_user_request.ex")
+        refute File.exists?("lib/filtered_api/models/create_user_response201.ex")
+
+        # Check that component schemas were NOT generated when filtering
+        # (This is the key behavior - we only generate inline schemas when filtering)
+        refute File.exists?("lib/filtered_api/models/pet.ex")
+        refute File.exists?("lib/filtered_api/models/user.ex")
+
+        # Verify output mentions the right files (handle ANSI color codes)
+        assert output =~ "lib/filtered_api/api/pets.ex"
+        refute output =~ "lib/filtered_api/api/users.ex"
+        refute output =~ "lib/filtered_api/models/pet.ex"
+      end)
+    end
+
+    test "generates all models without tag filtering", %{temp_dir: temp_dir} do
+      # Use same spec as above but without tag filtering
+      spec_with_models = %{
+        "openapi" => "3.0.0",
+        "info" => %{"title" => "Test", "version" => "1.0"},
+        "paths" => %{
+          "/pets" => %{
+            "post" => %{
+              "tags" => ["pets"],
+              "operationId" => "createPet",
+              "requestBody" => %{
+                "content" => %{
+                  "application/json" => %{
+                    "schema" => %{
+                      "type" => "object",
+                      "properties" => %{
+                        "name" => %{"type" => "string"}
+                      }
+                    }
+                  }
+                }
+              },
+              "responses" => %{
+                "201" => %{
+                  "description" => "Created",
+                  "content" => %{
+                    "application/json" => %{
+                      "schema" => %{
+                        "type" => "object",
+                        "properties" => %{
+                          "id" => %{"type" => "integer"}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "components" => %{
+          "schemas" => %{
+            "Pet" => %{
+              "type" => "object",
+              "properties" => %{
+                "id" => %{"type" => "integer"},
+                "name" => %{"type" => "string"}
+              }
+            }
+          }
+        }
+      }
+
+      spec_file = Path.join(temp_dir, "full_spec.json")
+      File.write!(spec_file, Jason.encode!(spec_with_models))
+
+      File.cd!(temp_dir, fn ->
+        capture_io(fn ->
+          Mix.Tasks.Portico.Generate.run(["--module", "FullAPI", "--spec", spec_file])
+        end)
+
+        # Should generate both component schemas and inline schemas
+        assert File.exists?("lib/full_api/models/pet.ex")
+        assert File.exists?("lib/full_api/models/create_pet_request.ex")
+        assert File.exists?("lib/full_api/models/create_pet_response201.ex")
+      end)
+    end
+
+    test "respects --no-models flag with tag filtering", %{temp_dir: temp_dir} do
+      spec_file = Path.join(temp_dir, "test_spec.json")
+      File.write!(spec_file, Jason.encode!(@test_spec_json))
+
+      config = %{
+        "spec_info" => %{
+          "module" => "NoModelsAPI",
+          "title" => "No Models API",
+          "source" => spec_file
+        },
+        "tags" => ["user-management"]
+      }
+
+      config_file = Path.join(temp_dir, "no_models.config.json")
+      File.write!(config_file, Jason.encode!(config))
+
+      File.cd!(temp_dir, fn ->
+        output =
+          capture_io(fn ->
+            Mix.Tasks.Portico.Generate.run(["--config", config_file, "--no-models"])
+          end)
+
+        # Should generate API but not models
+        assert File.exists?("lib/no_models_api/api/user_management.ex")
+        refute File.exists?("lib/no_models_api/models")
+
+        # Verify output doesn't mention creating models (handle ANSI color codes)
+        assert output =~ "lib/no_models_api/api/user_management.ex"
+        refute output =~ "lib/no_models_api/models"
+      end)
+    end
+  end
+
   describe "error handling" do
     test "handles missing spec file gracefully" do
       assert_raise File.Error, fn ->

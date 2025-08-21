@@ -121,7 +121,7 @@ defmodule Mix.Tasks.Portico.Generate do
 
     # Generate models unless --no-models flag is set
     if generate_models do
-      generate_model_modules(spec, opts)
+      generate_model_modules(spec, opts, tag_filters)
     end
   end
 
@@ -249,15 +249,20 @@ defmodule Mix.Tasks.Portico.Generate do
     Enum.empty?(Enum.filter(tag_keys, &(&1 in tag_filters)))
   end
 
-  defp generate_model_modules(spec, opts) do
-    # Extract schemas from components (if any)
-    component_schemas = Portico.Spec.Schema.extract_schemas(spec)
-
-    # Extract inline schemas from responses and request bodies
-    inline_schemas = Portico.Spec.Schema.extract_inline_schemas(spec)
-
-    # Combine both sources of schemas
-    all_schemas = Map.merge(component_schemas, inline_schemas)
+  defp generate_model_modules(spec, opts, tag_filters) do
+    # When tag filters are active, only generate inline schemas from filtered paths
+    # This avoids generating unused component schemas
+    all_schemas =
+      if tag_filters do
+        # Filter spec first, then extract only inline schemas
+        filtered_spec = filter_spec_by_tags(spec, tag_filters)
+        Portico.Spec.Schema.extract_inline_schemas(filtered_spec)
+      else
+        # Normal behavior: extract all schemas
+        component_schemas = Portico.Spec.Schema.extract_schemas(spec)
+        inline_schemas = Portico.Spec.Schema.extract_inline_schemas(spec)
+        Map.merge(component_schemas, inline_schemas)
+      end
 
     if map_size(all_schemas) > 0 do
       # Create models directory
@@ -325,4 +330,28 @@ defmodule Mix.Tasks.Portico.Generate do
 
   defp format_ecto_type_for_template({:array, type}), do: {:array, type}
   defp format_ecto_type_for_template(type), do: type
+
+  defp filter_spec_by_tags(%Portico.Spec{paths: paths} = spec, tag_filters) do
+    # Filter paths to only include operations with matching tags
+    filtered_paths =
+      paths
+      |> Enum.map(fn path ->
+        filtered_operations =
+          path.operations
+          |> Enum.filter(fn operation ->
+            # Keep operation if it has a matching tag
+            Enum.any?(operation.tags, &(&1 in tag_filters))
+          end)
+
+        %{path | operations: filtered_operations}
+      end)
+      |> Enum.filter(fn path ->
+        # Only keep paths that have at least one operation
+        length(path.operations) > 0
+      end)
+
+    # We don't filter components - let the model extraction logic handle that
+    # based on what's actually referenced in the filtered operations
+    %{spec | paths: filtered_paths}
+  end
 end
