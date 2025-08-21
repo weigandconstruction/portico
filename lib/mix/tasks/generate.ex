@@ -305,10 +305,21 @@ defmodule Mix.Tasks.Portico.Generate do
 
     source_path = Path.join(:code.priv_dir(:portico), "templates/model.ex.eex")
 
+    # Use create_file instead of copy_template so we can use custom formatting
+    # and support code formatting on versions older than 1.18
     if File.exists?(source_path) do
-      copy_template(source_path, "lib/#{opts[:name]}/models/#{filename}.ex", opts,
-        format_elixir: true
-      )
+      content =
+        source_path
+        |> EEx.eval_file(assigns: opts)
+        |> Code.format_string!(
+          locals_without_parens: [
+            field: 1,
+            field: 2,
+            field: 3
+          ]
+        )
+
+      create_file("lib/#{opts[:name]}/models/#{filename}.ex", content)
     end
   end
 

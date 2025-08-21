@@ -120,15 +120,15 @@ defmodule EctoModelGenerationTest do
       assert content =~ "embedded_schema do"
 
       # Check for proper field definitions
-      assert content =~ "field(:id, :integer)"
-      assert content =~ "field(:name, :string)"
-      assert content =~ "field(:email, :string)"
-      assert content =~ "field(:created_at, :utc_datetime)"
-      assert content =~ "field(:score, :decimal)"
-      assert content =~ "field(:is_active, :boolean)"
-      assert content =~ "field(:tags, {:array, :string})"
+      assert content =~ "field :id, :integer"
+      assert content =~ "field :name, :string"
+      assert content =~ "field :email, :string"
+      assert content =~ "field :created_at, :utc_datetime"
+      assert content =~ "field :score, :decimal"
+      assert content =~ "field :is_active, :boolean"
+      assert content =~ "field :tags, {:array, :string}"
       # Inline object becomes map
-      assert content =~ "field(:metadata, :map)"
+      assert content =~ "field :metadata, :map"
     end
 
     test "generates models with centralized helpers", %{temp_dir: temp_dir} do

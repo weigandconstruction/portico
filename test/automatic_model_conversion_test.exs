@@ -149,11 +149,11 @@ defmodule AutomaticModelConversionTest do
       model_code = File.read!(model_file)
 
       # Verify the model has correct fields
-      assert model_code =~ "field(:id, :integer)"
-      assert model_code =~ "field(:title, :string)"
-      assert model_code =~ "field(:body, :string)"
-      assert model_code =~ "field(:published_at, :utc_datetime)"
-      assert model_code =~ "field(:author, :map)"
+      assert model_code =~ "field :id, :integer"
+      assert model_code =~ "field :title, :string"
+      assert model_code =~ "field :body, :string"
+      assert model_code =~ "field :published_at, :utc_datetime"
+      assert model_code =~ "field :author, :map"
 
       # Verify it uses Ecto.Schema
       assert model_code =~ "use Ecto.Schema"
