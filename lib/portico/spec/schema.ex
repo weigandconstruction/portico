@@ -252,12 +252,21 @@ defmodule Portico.Spec.Schema do
   defp extract_schemas_from_content(_, _, _, _, _), do: []
 
   defp should_extract_schema?(schema) when is_map(schema) do
-    # Extract if it's an object with properties (not just a ref or primitive type)
+    # Extract if it's an object with properties OR an array of objects (not just a ref or primitive type)
     case schema do
       %{"type" => "object", "properties" => props} when is_map(props) and map_size(props) > 0 ->
         true
 
       %{"properties" => props} when is_map(props) and map_size(props) > 0 ->
+        true
+
+      # Also extract arrays of objects (common for list endpoints)
+      %{"type" => "array", "items" => %{"type" => "object", "properties" => props}} 
+      when is_map(props) and map_size(props) > 0 ->
+        true
+        
+      %{"type" => "array", "items" => %{"properties" => props}} 
+      when is_map(props) and map_size(props) > 0 ->
         true
 
       _ ->

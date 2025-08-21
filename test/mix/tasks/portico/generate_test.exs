@@ -653,15 +653,16 @@ defmodule Mix.Tasks.Portico.GenerateTest do
         refute File.exists?("lib/filtered_api/models/create_user_request.ex")
         refute File.exists?("lib/filtered_api/models/create_user_response201.ex")
 
-        # Check that component schemas were NOT generated when filtering
-        # (This is the key behavior - we only generate inline schemas when filtering)
-        refute File.exists?("lib/filtered_api/models/pet.ex")
+        # Check that REFERENCED component schemas ARE generated when filtering
+        # (Pet is referenced by the pets operations)
+        assert File.exists?("lib/filtered_api/models/pet.ex")
+        # But User is NOT referenced by pets operations, so it shouldn't be generated
         refute File.exists?("lib/filtered_api/models/user.ex")
 
         # Verify output mentions the right files (handle ANSI color codes)
         assert output =~ "lib/filtered_api/api/pets.ex"
         refute output =~ "lib/filtered_api/api/users.ex"
-        refute output =~ "lib/filtered_api/models/pet.ex"
+        assert output =~ "lib/filtered_api/models/pet.ex"
       end)
     end
 

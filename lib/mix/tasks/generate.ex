@@ -121,9 +121,36 @@ defmodule Mix.Tasks.Portico.Generate do
 
     # Generate models unless --no-models flag is set
     if generate_models do
-      generate_model_modules(spec, opts, tag_filters)
+      # If filtering by tags, also parse unresolved spec to find refs
+      unresolved_spec = if tag_filters, do: parse_unresolved_spec(opts[:spec]), else: nil
+      generate_model_modules(spec, opts, tag_filters, unresolved_spec)
     end
   end
+
+  defp parse_unresolved_spec(source) do
+    # Parse spec without resolving refs to see what refs are used
+    content =
+      if String.starts_with?(source, "https://") do
+        Portico.Fetch.fetch(source)
+      else
+        {File.read!(source), path_to_content_type(source)}
+      end
+
+    parse_content(content)
+  end
+
+  defp path_to_content_type(path) do
+    case Path.extname(path) do
+      ".json" -> :json
+      ".yaml" -> :yaml
+      ".yml" -> :yaml
+      _ -> raise("Unsupported file extension: #{Path.extname(path)}")
+    end
+  end
+
+  defp parse_content({content, :json}), do: Jason.decode!(content)
+  defp parse_content({content, :yaml}), do: YamlElixir.read_from_string!(content)
+  defp parse_content(_), do: raise("Unsupported content type or malformed data")
 
   defp copy_client(opts) do
     source_path = Path.join(:code.priv_dir(:portico), "templates/client.ex.eex")
@@ -249,14 +276,32 @@ defmodule Mix.Tasks.Portico.Generate do
     Enum.empty?(Enum.filter(tag_keys, &(&1 in tag_filters)))
   end
 
-  defp generate_model_modules(spec, opts, tag_filters) do
-    # When tag filters are active, only generate inline schemas from filtered paths
-    # This avoids generating unused component schemas
+  defp generate_model_modules(spec, opts, tag_filters, unresolved_spec) do
     all_schemas =
-      if tag_filters do
-        # Filter spec first, then extract only inline schemas
+      if tag_filters && unresolved_spec do
+        # When filtering, include both inline schemas and component schemas referenced by filtered operations
         filtered_spec = filter_spec_by_tags(spec, tag_filters)
-        Portico.Spec.Schema.extract_inline_schemas(filtered_spec)
+        inline_schemas = Portico.Spec.Schema.extract_inline_schemas(filtered_spec)
+
+        # Find component schema refs used in the filtered operations from the unresolved spec
+        component_refs = extract_refs_from_filtered_spec(unresolved_spec, tag_filters)
+
+        # Get the actual schemas for those refs
+        tracked_component_schemas =
+          component_refs
+          |> Enum.filter(&String.starts_with?(&1, "#/components/schemas/"))
+          |> Enum.map(&Portico.Spec.Schema.resolve_ref_name/1)
+          # Remove nils
+          |> Enum.filter(& &1)
+          |> Enum.reduce(%{}, fn schema_name, acc ->
+            # Get the schema from components if it exists
+            case get_in(spec.components, ["schemas", schema_name]) do
+              nil -> acc
+              schema -> Map.put(acc, schema_name, Portico.Spec.Schema.parse(schema))
+            end
+          end)
+
+        Map.merge(tracked_component_schemas, inline_schemas)
       else
         # Normal behavior: extract all schemas
         component_schemas = Portico.Spec.Schema.extract_schemas(spec)
@@ -350,8 +395,49 @@ defmodule Mix.Tasks.Portico.Generate do
         length(path.operations) > 0
       end)
 
-    # We don't filter components - let the model extraction logic handle that
-    # based on what's actually referenced in the filtered operations
     %{spec | paths: filtered_paths}
   end
+
+  defp extract_refs_from_filtered_spec(unresolved_spec, tag_filters) do
+    # Extract all $ref values from the filtered operations in the unresolved spec
+    filtered_paths =
+      unresolved_spec["paths"]
+      |> Enum.flat_map(fn {_path, path_item} ->
+        path_item
+        |> Enum.filter(fn {method, _} ->
+          method in ["get", "post", "put", "patch", "delete", "options", "head"]
+        end)
+        |> Enum.filter(fn {_method, operation} ->
+          # Keep operations with matching tags
+          tags = operation["tags"] || []
+          Enum.any?(tags, &(&1 in tag_filters))
+        end)
+        |> Enum.flat_map(fn {_method, operation} ->
+          extract_refs_from_operation(operation)
+        end)
+      end)
+
+    MapSet.new(filtered_paths) |> MapSet.to_list()
+  end
+
+  defp extract_refs_from_operation(operation) do
+    # Recursively extract all $ref values from an operation
+    extract_refs_from_value(operation)
+  end
+
+  defp extract_refs_from_value(value) when is_map(value) do
+    if Map.has_key?(value, "$ref") do
+      [value["$ref"]]
+    else
+      value
+      |> Map.values()
+      |> Enum.flat_map(&extract_refs_from_value/1)
+    end
+  end
+
+  defp extract_refs_from_value(value) when is_list(value) do
+    Enum.flat_map(value, &extract_refs_from_value/1)
+  end
+
+  defp extract_refs_from_value(_), do: []
 end

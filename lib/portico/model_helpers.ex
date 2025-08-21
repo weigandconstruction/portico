@@ -206,6 +206,11 @@ defmodule Portico.ModelHelpers do
     map_size(properties) > 0
   end
 
+  def should_generate_model?(%Schema{type: "array", items: %Schema{} = item_schema}) do
+    # Generate model for array types if the items are objects with properties
+    should_generate_model?(item_schema)
+  end
+
   def should_generate_model?(%Schema{all_of: schemas}) when not is_nil(schemas) do
     # Generate model for allOf if any of the schemas has properties
     Enum.any?(schemas, fn schema ->
