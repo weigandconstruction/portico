@@ -432,8 +432,9 @@ defmodule Portico.Helpers do
   end
 
   @doc """
-  Groups operations by their tags. If an operation has multiple tags, it uses the first tag.
-  If an operation has no tags, it falls back to using the path as the grouping key.
+  Groups operations by their tags. If an operation has multiple tags, it will appear
+  under all of its tags. If an operation has no tags, it falls back to using the 
+  path as the grouping key.
   Returns a map where keys are tag names and values are lists of {path, operation} tuples.
 
   ## Examples:
@@ -447,15 +448,18 @@ defmodule Portico.Helpers do
   def group_operations_by_tag(paths) when is_list(paths) do
     paths
     |> Enum.flat_map(fn path ->
-      Enum.map(path.operations, fn operation ->
-        tag =
-          case operation.tags do
-            [first_tag | _] -> first_tag
+      Enum.flat_map(path.operations, fn operation ->
+        case operation.tags do
+          [] ->
             # Fallback to path when no tags
-            [] -> path.path
-          end
+            [{path.path, {path, operation}}]
 
-        {tag, {path, operation}}
+          tags ->
+            # Create an entry for each tag
+            Enum.map(tags, fn tag ->
+              {tag, {path, operation}}
+            end)
+        end
       end)
     end)
     |> Enum.group_by(fn {tag, _} -> tag end, fn {_, path_operation} -> path_operation end)
