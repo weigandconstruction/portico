@@ -167,7 +167,7 @@ defmodule Portico.HelpersTest do
       assert length(result["content"]) == 2
     end
 
-    test "uses first tag when operation has multiple tags" do
+    test "includes operation under all tags when operation has multiple tags" do
       paths = [
         %SpecPath{
           path: "/items",
@@ -180,9 +180,22 @@ defmodule Portico.HelpersTest do
       result = Helpers.group_operations_by_tag(paths)
 
       assert Map.has_key?(result, "primary")
-      assert not Map.has_key?(result, "secondary")
-      assert not Map.has_key?(result, "tertiary")
+      assert Map.has_key?(result, "secondary")
+      assert Map.has_key?(result, "tertiary")
       assert length(result["primary"]) == 1
+      assert length(result["secondary"]) == 1
+      assert length(result["tertiary"]) == 1
+
+      # Verify the same operation appears under each tag
+      [{path1, op1}] = result["primary"]
+      [{path2, op2}] = result["secondary"]
+      [{path3, op3}] = result["tertiary"]
+      assert path1.path == "/items"
+      assert path2.path == "/items"
+      assert path3.path == "/items"
+      assert op1.method == "get"
+      assert op2.method == "get"
+      assert op3.method == "get"
     end
 
     test "falls back to path when no tags are present" do

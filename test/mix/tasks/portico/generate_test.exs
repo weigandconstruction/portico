@@ -271,7 +271,7 @@ defmodule Mix.Tasks.Portico.GenerateTest do
       end)
     end
 
-    test "uses first tag when operation has multiple tags", %{temp_dir: temp_dir} do
+    test "creates modules for all tags when operation has multiple tags", %{temp_dir: temp_dir} do
       spec_with_multiple_tags = %{
         "openapi" => "3.0.0",
         "info" => %{"title" => "Test", "version" => "1.0"},
@@ -293,16 +293,27 @@ defmodule Mix.Tasks.Portico.GenerateTest do
           Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
         end)
 
-        # Should create module based on first tag only
+        # Should create modules for ALL tags
         primary_file = "lib/test_api/api/primary.ex"
+        secondary_file = "lib/test_api/api/secondary.ex"
+        tertiary_file = "lib/test_api/api/tertiary.ex"
+
         assert File.exists?(primary_file)
+        assert File.exists?(secondary_file)
+        assert File.exists?(tertiary_file)
 
-        content = File.read!(primary_file)
-        assert content =~ "defmodule TestAPI.Primary"
+        # Each module should contain the operation
+        primary_content = File.read!(primary_file)
+        assert primary_content =~ "defmodule TestAPI.Primary"
+        assert primary_content =~ "def get_multi_tag(client"
 
-        # Should not create modules for other tags
-        refute File.exists?("lib/test_api/api/secondary.ex")
-        refute File.exists?("lib/test_api/api/tertiary.ex")
+        secondary_content = File.read!(secondary_file)
+        assert secondary_content =~ "defmodule TestAPI.Secondary"
+        assert secondary_content =~ "def get_multi_tag(client"
+
+        tertiary_content = File.read!(tertiary_file)
+        assert tertiary_content =~ "defmodule TestAPI.Tertiary"
+        assert tertiary_content =~ "def get_multi_tag(client"
       end)
     end
 
@@ -395,6 +406,90 @@ defmodule Mix.Tasks.Portico.GenerateTest do
         assert "content.ex" in api_files
         # untagged fallback
         assert "untagged.ex" in api_files
+      end)
+    end
+  end
+
+  describe "tag filtering" do
+    test "filters multi-tag operations by any of their tags", %{temp_dir: temp_dir} do
+      spec_with_multiple_tags = %{
+        "openapi" => "3.0.0",
+        "info" => %{"title" => "Test", "version" => "1.0"},
+        "paths" => %{
+          "/multi-tag-op" => %{
+            "get" => %{
+              "tags" => ["users", "admin", "reports"],
+              "summary" => "Multi-tag operation"
+            }
+          },
+          "/single-tag-op" => %{
+            "get" => %{
+              "tags" => ["users"],
+              "summary" => "Single tag operation"
+            }
+          },
+          "/different-tag-op" => %{
+            "get" => %{
+              "tags" => ["posts"],
+              "summary" => "Different tag operation"
+            }
+          }
+        }
+      }
+
+      spec_file = Path.join(temp_dir, "tag_filter_test.json")
+      File.write!(spec_file, Jason.encode!(spec_with_multiple_tags))
+
+      File.cd!(temp_dir, fn ->
+        # Test filtering by "admin" tag - should get the multi-tag operation
+        capture_io(fn ->
+          Mix.Tasks.Portico.Generate.run([
+            "--module",
+            "TestAPI",
+            "--spec",
+            spec_file,
+            "--tag",
+            "admin"
+          ])
+        end)
+
+        # Should only create the admin module
+        admin_file = "lib/test_api/api/admin.ex"
+        assert File.exists?(admin_file)
+        refute File.exists?("lib/test_api/api/users.ex")
+        refute File.exists?("lib/test_api/api/posts.ex")
+        refute File.exists?("lib/test_api/api/reports.ex")
+
+        admin_content = File.read!(admin_file)
+        assert admin_content =~ "def get_multi_tag_op(client"
+        refute admin_content =~ "def get_single_tag_op(client"
+        refute admin_content =~ "def get_different_tag_op(client"
+
+        # Clean up for next test
+        File.rm_rf!("lib")
+
+        # Test filtering by "users" tag - should get both operations tagged with "users"
+        capture_io(fn ->
+          Mix.Tasks.Portico.Generate.run([
+            "--module",
+            "TestAPI",
+            "--spec",
+            spec_file,
+            "--tag",
+            "users"
+          ])
+        end)
+
+        users_file = "lib/test_api/api/users.ex"
+        assert File.exists?(users_file)
+        refute File.exists?("lib/test_api/api/admin.ex")
+        refute File.exists?("lib/test_api/api/posts.ex")
+        refute File.exists?("lib/test_api/api/reports.ex")
+
+        users_content = File.read!(users_file)
+        assert users_content =~ "def get_multi_tag_op(client"
+        assert users_content =~ "def get_single_tag_op(client"
+        refute users_content =~ "def get_different_tag_op(client"
       end)
     end
   end
