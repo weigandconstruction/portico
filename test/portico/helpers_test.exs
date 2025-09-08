@@ -91,6 +91,17 @@ defmodule Portico.HelpersTest do
       assert Helpers.tag_to_module_name("3rd-party-integrations") == "N3rdPartyIntegrations"
       assert Helpers.tag_to_module_name("404-handlers") == "N404Handlers"
     end
+
+    test "handles dotted tags (like Microsoft Graph)" do
+      assert Helpers.tag_to_module_name("users.directoryObject") == "UsersDirectoryObject"
+
+      assert Helpers.tag_to_module_name("users.oauth2PermissionGrant") ==
+               "UsersOauth2PermissionGrant"
+
+      assert Helpers.tag_to_module_name("teams.channel.messages") == "TeamsChannelMessages"
+      assert Helpers.tag_to_module_name("microsoft.graph.user") == "MicrosoftGraphUser"
+      assert Helpers.tag_to_module_name("api.v2.endpoints") == "ApiV2Endpoints"
+    end
   end
 
   describe "tag_to_filename/1" do
@@ -114,7 +125,7 @@ defmodule Portico.HelpersTest do
       assert Helpers.tag_to_filename("Construction Financials/budget") ==
                "construction_financials_budget"
 
-      assert Helpers.tag_to_filename("API/v2.0/endpoints") == "api_v20_endpoints"
+      assert Helpers.tag_to_filename("API/v2.0/endpoints") == "api_v2_0_endpoints"
     end
 
     test "removes invalid characters and normalizes" do
@@ -134,9 +145,20 @@ defmodule Portico.HelpersTest do
 
     test "handles tags starting with numbers" do
       assert Helpers.tag_to_filename("1-Click Applications") == "n1_click_applications"
-      assert Helpers.tag_to_filename("2FA/authentication") == "n2fa_authentication"
+      assert Helpers.tag_to_filename("2FA/authentication") == "n2_fa_authentication"
       assert Helpers.tag_to_filename("3rd-party-integrations") == "n3rd_party_integrations"
       assert Helpers.tag_to_filename("404-handlers") == "n404_handlers"
+    end
+
+    test "handles dotted tags (like Microsoft Graph)" do
+      assert Helpers.tag_to_filename("users.directoryObject") == "users_directory_object"
+
+      assert Helpers.tag_to_filename("users.oauth2PermissionGrant") ==
+               "users_oauth2_permission_grant"
+
+      assert Helpers.tag_to_filename("teams.channel.messages") == "teams_channel_messages"
+      assert Helpers.tag_to_filename("microsoft.graph.user") == "microsoft_graph_user"
+      assert Helpers.tag_to_filename("api.v2.endpoints") == "api_v2_endpoints"
     end
   end
 

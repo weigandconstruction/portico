@@ -93,6 +93,7 @@ defmodule Portico.Helpers do
     module_name =
       tag
       |> String.replace(~r/[\/\-_&\s]+/, " ")
+      |> String.replace(".", " ")
       |> String.replace(~r/[^a-zA-Z0-9\s]/, "")
       |> String.split()
       |> Enum.map(&Macro.camelize/1)
@@ -128,8 +129,13 @@ defmodule Portico.Helpers do
   def tag_to_filename(tag) when is_binary(tag) do
     filename =
       tag
+      # First handle camelCase by inserting underscores before capital letters
+      |> String.replace(~r/([a-z])([A-Z])/, "\\1_\\2")
+      # Also handle number followed by capital letter (e.g., "oauth2Permission")
+      |> String.replace(~r/(\d)([A-Z])/, "\\1_\\2")
+      # Replace dots, slashes, dashes, and other separators with underscores
+      |> String.replace(~r/[\.\/\-_&\s]+/, "_")
       |> String.downcase()
-      |> String.replace(~r/[\/\-_&\s]+/, "_")
       |> String.replace(~r/[^a-z0-9_]/, "")
       |> String.replace(~r/_+/, "_")
       |> String.trim_leading("_")
