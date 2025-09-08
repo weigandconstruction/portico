@@ -63,11 +63,13 @@ defmodule Portico.Spec.Parameter do
 
   defp normalize_name(name) do
     name
+    |> String.replace("@", "at_")
+    |> String.replace("$", "dollar_")
+    |> String.replace(".", "_")
     |> Macro.underscore()
     |> String.replace("-", "")
     |> String.replace("[", "_")
     |> String.replace("]", "")
-    |> String.replace("$", "dollar_")
     |> escape_parameter_name()
   end
 
