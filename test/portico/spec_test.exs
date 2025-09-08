@@ -157,5 +157,52 @@ defmodule Portico.SpecTest do
       assert length(user_id_path.operations) == 1
       assert length(user_id_path.parameters) == 1
     end
+
+    test "normalizes parameter names with special characters" do
+      json = %{
+        "openapi" => "3.0.0",
+        "info" => %{},
+        "paths" => %{
+          "/test" => %{
+            "get" => %{
+              "summary" => "Test special parameter names",
+              "parameters" => [
+                %{
+                  "name" => "@id",
+                  "in" => "query",
+                  "required" => true,
+                  "schema" => %{"type" => "string"}
+                },
+                %{
+                  "name" => "$top",
+                  "in" => "query",
+                  "required" => false,
+                  "schema" => %{"type" => "integer"}
+                },
+                %{
+                  "name" => "@odata.id",
+                  "in" => "query",
+                  "required" => false,
+                  "schema" => %{"type" => "string"}
+                }
+              ]
+            }
+          }
+        }
+      }
+
+      spec = Spec.parse(json)
+      path = Enum.find(spec.paths, &(&1.path == "/test"))
+      operation = List.first(path.operations)
+
+      param_names = Enum.map(operation.parameters, & &1.internal_name)
+
+      # @ should be replaced with "at_"
+      assert "at_id" in param_names
+      # $ should be replaced with "dollar_"
+      assert "dollar_top" in param_names
+      # Complex case with both @ and .
+      assert "at_odata_id" in param_names
+    end
   end
 end
