@@ -194,9 +194,9 @@ defmodule Portico.SpecTest do
       spec = Spec.parse(json)
       path = Enum.find(spec.paths, &(&1.path == "/test"))
       operation = List.first(path.operations)
-      
+
       param_names = Enum.map(operation.parameters, & &1.internal_name)
-      
+
       # @ should be replaced with "at_"
       assert "at_id" in param_names
       # $ should be replaced with "dollar_"
