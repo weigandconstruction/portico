@@ -114,9 +114,7 @@ defmodule Mix.Tasks.Portico.Config do
       # Split on whitespace
       |> String.split(~r/\s+/)
       # Capitalize each word
-      |> Enum.map(&String.capitalize/1)
-      # Join together
-      |> Enum.join()
+      |> Enum.map_join(&String.capitalize/1)
 
     name
   end

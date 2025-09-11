@@ -3,7 +3,7 @@ defmodule <%= @module %>.<%= @local_module %> do
   API for <%= @local_module %>
   """
 
-  <%= for {path, operation} <- @path_operations do %>
+  <%= for {path, operation} <- @path_operations do %><% response_model = Portico.Helpers.get_response_model(operation, @module, @generate_models) %>
     @doc """
     <%= operation.description %>
 
@@ -13,7 +13,7 @@ defmodule <%= @module %>.<%= @local_module %> do
 <%= Portico.Helpers.all_parameters_for_docs(path, operation) |> Enum.map(fn param ->
   main_param = "    * `#{param.name}` - `#{param.type}`#{if param.required, do: " (required)", else: " (optional)"}#{if param.description, do: " - #{param.description}", else: ""}"
   nested = if Map.has_key?(param, :nested_params) && param.nested_params do
-    param.nested_params |> Enum.map(fn nested_param -> "      * `#{nested_param.name}` - `#{nested_param.type}`#{if nested_param.required, do: " (required)", else: " (optional)"}#{if nested_param.description, do: " - #{nested_param.description}", else: ""}" end) |> Enum.join("\n")
+    Enum.map_join(param.nested_params, "\n", fn nested_param -> "      * `#{nested_param.name}` - `#{nested_param.type}`#{if nested_param.required, do: " (required)", else: " (optional)"}#{if nested_param.description, do: " - #{nested_param.description}", else: ""}" end)
   else
     ""
   end
@@ -53,6 +53,9 @@ end) |> Enum.join("\n") %>
 
         <%= if Portico.Helpers.has_request_body?(operation) do %>
           json: body,
+        <% end %>
+        <%= if response_model do %>
+          model: <%= response_model %>,
         <% end %>
       )
     end

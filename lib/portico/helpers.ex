@@ -96,8 +96,7 @@ defmodule Portico.Helpers do
       |> String.replace(".", " ")
       |> String.replace(~r/[^a-zA-Z0-9\s]/, "")
       |> String.split()
-      |> Enum.map(&Macro.camelize/1)
-      |> Enum.join()
+      |> Enum.map_join(&Macro.camelize/1)
 
     # If the module name starts with a number, prefix it with "N"
     if Regex.match?(~r/^\d/, module_name) do
@@ -557,4 +556,48 @@ defmodule Portico.Helpers do
     param_list = Enum.join(param_types, ", ")
     "@spec #{function_name}(#{param_list}) :: {:ok, any()} | {:error, Exception.t()}"
   end
+
+  @doc """
+  Gets the response model module name for an operation if available.
+  Returns nil if no model is found or models are not generated.
+
+  Since schemas might be expanded inline (without $ref), we try multiple approaches:
+  1. Look for a $ref in the response schema
+  2. Use the operation_id to find inline response models (e.g., GetPostResponse)
+  """
+  @spec get_response_model(Operation.t(), String.t(), boolean()) :: String.t() | nil
+  def get_response_model(
+        %Operation{responses: responses, id: operation_id},
+        module_base,
+        generate_models
+      )
+      when generate_models and is_binary(operation_id) do
+    # First try to extract a ref-based model name
+    case Portico.ModelHelpers.extract_response_schema(responses) do
+      nil ->
+        # If no ref found, check if there's a 2xx response with inline schema
+        # and use the operation_id to generate the model name
+        success_response =
+          Enum.find(responses, fn {status, _} ->
+            String.starts_with?(to_string(status), "2")
+          end)
+
+        case success_response do
+          {_, %Portico.Spec.Response{content: %{"application/json" => %{"schema" => schema}}}}
+          when is_map(schema) and map_size(schema) > 0 ->
+            # Generate model name from operation_id (e.g., getPost -> GetPostResponse)
+            model_name = Portico.ModelHelpers.schema_to_module_name(operation_id <> "_response")
+            "#{module_base}.Models.#{model_name}"
+
+          _ ->
+            nil
+        end
+
+      schema_name ->
+        model_name = Portico.ModelHelpers.schema_to_module_name(schema_name)
+        "#{module_base}.Models.#{model_name}"
+    end
+  end
+
+  def get_response_model(_, _, _), do: nil
 end

@@ -169,7 +169,8 @@ defmodule <%= @module %>.Client do
   @doc """
   Makes an HTTP request using the provided client.
 
-  Returns `{:ok, body}` on success (2xx status codes) or `{:error, exception}` on failure.
+  Returns `{:ok, body}` on success (2xx status codes) or `{:error, exception}` on failure.<%= if @generate_models do %>
+  When a model is specified, the response body is automatically converted to the model struct.<% end %>
 
   ## Examples
 
@@ -181,17 +182,26 @@ defmodule <%= @module %>.Client do
         {:ok, body} -> handle_success(body)
         {:error, %HTTPError{status: 404}} -> handle_not_found()
         {:error, %TransportError{}} -> handle_network_error()
-      end
+      end<%= if @generate_models do %>
+
+      # Request with model conversion
+      {:ok, %<%= @module %>.Models.User{}} = <%= @module %>.Client.request(client, 
+        method: :get, 
+        url: "/users/123",
+        model: <%= @module %>.Models.User
+      )<% end %>
 
   """
   @spec request(Req.Request.t(), keyword()) :: {:ok, any()} | {:error, Exception.t()}
-  def request(client, options \\ []) do
+  def request(client, options \\ []) do<%= if @generate_models do %>
+    {model, options} = Keyword.pop(options, :model)<% end %>
+    
     client
     |> clean_options(options)
     |> Req.request()
     |> case do
       {:ok, %{status: status, body: body}} when status in 200..299 ->
-        {:ok, body}
+        <%= if @generate_models do %>{:ok, convert_response(body, model)}<% else %>{:ok, body}<% end %>
 
       {:ok, %{status: status, body: body}} ->
         {:error, HTTPError.exception({status, body})}
@@ -220,5 +230,23 @@ defmodule <%= @module %>.Client do
       end)
 
     Req.merge(client, cleaned_options)
+  end<%= if @generate_models do %>
+
+  # Convert response body to model struct if specified
+  defp convert_response(body, nil), do: body
+  
+  defp convert_response(body, model) when is_atom(model) and not is_nil(model) do
+    cond do
+      is_list(body) ->
+        Enum.map(body, &model.from_json/1)
+      
+      is_map(body) ->
+        model.from_json(body)
+      
+      true ->
+        body
+    end
   end
+  
+  defp convert_response(body, _), do: body<% end %>
 end
