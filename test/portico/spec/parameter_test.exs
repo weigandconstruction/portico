@@ -4,6 +4,29 @@ defmodule Portico.Spec.ParameterTest do
   alias Portico.Spec.Parameter
 
   describe "parse/1" do
+    test "normalizes comparison operators in parameter names" do
+      test_cases = [
+        {"DateSent<", "date_sent_lt"},
+        {"DateSent>", "date_sent_gt"},
+        {"DateSent<=", "date_sent_lte"},
+        {"DateSent>=", "date_sent_gte"},
+        {"created[lt]", "created_lt"},
+        {"created[gt]", "created_gt"},
+        {"created[lte]", "created_lte"},
+        {"created[gte]", "created_gte"},
+        {"field!=value", "field_ne_value"},
+        {"field<>value", "field_ne_value"},
+        {"field=value", "field_eq_value"}
+      ]
+
+      for {input_name, expected_internal} <- test_cases do
+        input = %{"name" => input_name, "in" => "query"}
+        param = Parameter.parse(input)
+
+        assert param.name == input_name
+        assert param.internal_name == expected_internal
+      end
+    end
     test "parses a minimal parameter" do
       input = %{
         "name" => "id",

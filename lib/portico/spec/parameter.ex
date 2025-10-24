@@ -62,15 +62,23 @@ defmodule Portico.Spec.Parameter do
   end
 
   defp normalize_name(name) do
-    name
-    |> String.replace("@", "at_")
-    |> String.replace("$", "dollar_")
-    |> String.replace(".", "_")
-    |> Macro.underscore()
-    |> String.replace("-", "")
-    |> String.replace("[", "_")
-    |> String.replace("]", "")
-    |> escape_parameter_name()
+  name
+  |> String.replace("@", "at_")
+  |> String.replace("$", "dollar_")
+  |> String.replace(".", "_")
+  # Comparison operators: longer first
+  |> String.replace("<=", "_lte")
+  |> String.replace(">=", "_gte")
+  |> String.replace("<>", "_ne")
+  |> String.replace("!=", "_ne")
+  |> String.replace("<", "_lt")
+  |> String.replace(">", "_gt")
+  |> String.replace("=", "_eq")
+  |> Macro.underscore()
+  |> String.replace("-", "")
+  |> String.replace("[", "_")
+  |> String.replace("]", "")
+  |> escape_parameter_name()
   end
 
   defp escape_parameter_name(name) when is_binary(name) do
