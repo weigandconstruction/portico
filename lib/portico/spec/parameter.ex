@@ -1,9 +1,56 @@
 defmodule Portico.Spec.Parameter do
   @moduledoc """
   Represents a parameter in the Portico specification.
+
   A parameter is a piece of data that can be passed to an API endpoint.
   It includes details such as the parameter name, location (in, path, query, header, cookie),
   description, schema, content, style, and whether it is required or deprecated.
+
+  ## Parameter Name Normalization
+
+  Parameter names from OpenAPI specs are normalized to valid Elixir identifiers
+  for use in generated code. The original name is preserved in the `name` field,
+  while the normalized version is stored in `internal_name`.
+
+  Normalization rules (applied in order):
+
+  - `@` → `at_`
+  - `$` → `dollar_`
+  - `.` → `_`
+  - Converted to snake_case via `Macro.underscore/1`
+  - `-` → removed
+  - `[` → `_`
+  - `]` → removed
+  - `<=` → `_lte` (less than or equal)
+  - `>=` → `_gte` (greater than or equal)
+  - `<>` → `_ne` (not equal)
+  - `!=` → `_ne` (not equal)
+  - `<` → `_lt` (less than)
+  - `>` → `_gt` (greater than)
+  - `=` → `_eq` (equal)
+  - Reserved Elixir keywords get `_` suffix
+
+  ## Examples
+
+      iex> param = Portico.Spec.Parameter.parse(%{"name" => "DateSent<", "in" => "query"})
+      iex> param.name
+      "DateSent<"
+      iex> param.internal_name
+      "date_sent_lt"
+
+      iex> param = Portico.Spec.Parameter.parse(%{"name" => "created[gte]", "in" => "query"})
+      iex> param.name
+      "created[gte]"
+      iex> param.internal_name
+      "created_gte"
+
+      iex> param = Portico.Spec.Parameter.parse(%{"name" => "user-id", "in" => "path"})
+      iex> param.internal_name
+      "userid"
+
+      iex> param = Portico.Spec.Parameter.parse(%{"name" => "end", "in" => "query"})
+      iex> param.internal_name
+      "end_"
   """
 
   @type t() :: %__MODULE__{
@@ -70,6 +117,13 @@ defmodule Portico.Spec.Parameter do
     |> String.replace("-", "")
     |> String.replace("[", "_")
     |> String.replace("]", "")
+    |> String.replace("<=", "_lte")
+    |> String.replace(">=", "_gte")
+    |> String.replace("<>", "_ne")
+    |> String.replace("!=", "_ne")
+    |> String.replace("<", "_lt")
+    |> String.replace(">", "_gt")
+    |> String.replace("=", "_eq")
     |> escape_parameter_name()
   end
 
