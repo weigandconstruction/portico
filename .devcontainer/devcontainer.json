@@ -82,7 +82,7 @@
 
   // Use 'postCreateCommand' to run commands after the container is created.
   "postCreateCommand": {
-    "mix-setup": "mix local.hex --force && mix local.rebar --force && mix archive.install --force hex phx_new && cd ${containerWorkspaceFolder} && mix setup",
+    "mix-setup": "mix local.hex --force && mix local.rebar --force && mix archive.install --force hex phx_new && cd ${containerWorkspaceFolder}",
     "claude": "curl -fsSL https://claude.ai/install.sh | bash",
     "codex": "npm i -g @openai/codex"
   }
