@@ -5,15 +5,36 @@ defmodule Portico.Spec.Resolver do
   This module handles JSON Pointer resolution for $ref objects, replacing them
   with the actual referenced content from within the same document.
 
+  ## Schema references
+
+  References that target `#/components/schemas/...` are special: they are
+  resolved like any other reference (their content is inlined), but the
+  original `$ref` pointer is **preserved** as a key on the resulting map.
+  This lets downstream tooling treat component schemas as named types (e.g.
+  to generate an `embeds_one :user, MyAPI.Models.User` rather than
+  re-inlining User's fields as an anonymous map) while still giving it
+  access to the resolved shape for inline use (typespecs, docs, validation).
+
+  Non-schema references (parameters, requestBodies, responses, headers,
+  etc.) are resolved without any metadata — they become the raw referenced
+  value.
+
   ## Examples
 
-      # Before resolution:
+      # Parameter ref — fully inlined, no $ref survives:
       %{"$ref" => "#/components/parameters/Query"}
+      # → %{"in" => "query", "name" => "q", "schema" => %{"type" => "string"}}
 
-      # After resolution (assuming Query parameter exists):
-      %{"in" => "query", "name" => "query", "schema" => %{"type" => "string"}}
-
+      # Schema ref — inlined *and* tagged with its original pointer:
+      %{"$ref" => "#/components/schemas/User"}
+      # → %{
+      #     "$ref" => "#/components/schemas/User",
+      #     "type" => "object",
+      #     "properties" => %{...}
+      #   }
   """
+
+  @schema_ref_prefix "#/components/schemas/"
 
   @doc """
   Resolves all $ref references in an OpenAPI specification.
@@ -67,13 +88,15 @@ defmodule Portico.Spec.Resolver do
       # Handle $ref object - replace with referenced content
       Map.has_key?(current, "$ref") ->
         ref_path = current["$ref"]
+        preserve? = schema_ref?(ref_path)
 
         cond do
-          # Currently visiting this ref - circular reference, return ref as-is
+          # Currently visiting this ref - circular reference, return ref-only map.
+          # For schema refs, that's already the desired "ref-as-handle" shape;
+          # for other refs, there is nothing else we can do without looping.
           MapSet.member?(visiting_refs, ref_path) ->
-            current
+            %{"$ref" => ref_path}
 
-          # New ref to resolve
           true ->
             case :ets.lookup(cache_table, ref_path) do
               [{_, cached_result}] ->
@@ -83,18 +106,27 @@ defmodule Portico.Spec.Resolver do
                 # Mark as visiting
                 new_visiting = MapSet.put(visiting_refs, ref_path)
 
-                # Resolve the reference
+                # Resolve and recurse into the referenced value
                 resolved =
-                  resolve_json_pointer(ref_path, root)
+                  ref_path
+                  |> resolve_json_pointer(root)
                   |> resolve_refs(root, new_visiting, cache_table)
 
+                # For schema refs, preserve the original pointer as metadata
+                # so downstream code can still identify the named type.
+                tagged =
+                  if preserve? and is_map(resolved) do
+                    Map.put(resolved, "$ref", ref_path)
+                  else
+                    resolved
+                  end
+
                 # Cache more aggressively but avoid huge objects
-                # Only skip caching if it's a massive nested structure
-                if should_cache?(resolved) do
-                  :ets.insert(cache_table, {ref_path, resolved})
+                if should_cache?(tagged) do
+                  :ets.insert(cache_table, {ref_path, tagged})
                 end
 
-                resolved
+                tagged
             end
         end
 
@@ -102,11 +134,9 @@ defmodule Portico.Spec.Resolver do
       true ->
         # Don't cache regular maps - only cache $ref resolutions
         # This prevents memory explosion from caching huge nested structures
-        current
-        |> Enum.map(fn {key, value} ->
+        Map.new(current, fn {key, value} ->
           {key, resolve_refs(value, root, visiting_refs, cache_table)}
         end)
-        |> Map.new()
     end
   end
 
@@ -115,6 +145,10 @@ defmodule Portico.Spec.Resolver do
   end
 
   defp resolve_refs(current, _root, _visiting_refs, _cache_table), do: current
+
+  # Does this ref point at a named component schema?
+  defp schema_ref?(ref) when is_binary(ref), do: String.starts_with?(ref, @schema_ref_prefix)
+  defp schema_ref?(_), do: false
 
   # Resolves a JSON Pointer reference like "#/components/parameters/Query"
   defp resolve_json_pointer("#/" <> pointer, root) do

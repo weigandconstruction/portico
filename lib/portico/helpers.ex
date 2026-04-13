@@ -96,8 +96,7 @@ defmodule Portico.Helpers do
       |> String.replace(".", " ")
       |> String.replace(~r/[^a-zA-Z0-9\s]/, "")
       |> String.split()
-      |> Enum.map(&Macro.camelize/1)
-      |> Enum.join()
+      |> Enum.map_join(&Macro.camelize/1)
 
     # If the module name starts with a number, prefix it with "N"
     if Regex.match?(~r/^\d/, module_name) do
@@ -556,5 +555,65 @@ defmodule Portico.Helpers do
 
     param_list = Enum.join(param_types, ", ")
     "@spec #{function_name}(#{param_list}) :: {:ok, any()} | {:error, Exception.t()}"
+  end
+
+  @doc """
+  Gets the response model module name for an operation if available.
+  Returns nil if no model is found or models are not generated.
+
+  Resolution order:
+    1. If the response schema (or its `items` for arrays) is a ref to a
+       named component schema, return that component's module. No
+       duplicate model is generated.
+    2. Otherwise, if the response has an inline schema, return the
+       manufactured `<OperationId>Response` module name — this matches the
+       suffix used by `Portico.Spec.Schema.extract_inline_schemas/1`.
+  """
+  @spec get_response_model(Operation.t(), String.t(), boolean()) :: String.t() | nil
+  def get_response_model(
+        %Operation{responses: responses, id: operation_id},
+        module_base,
+        generate_models
+      )
+      when generate_models and is_binary(operation_id) do
+    cond do
+      # Named component schema — reference it directly.
+      schema_name = Portico.ModelHelpers.extract_response_schema(responses) ->
+        model_name = Portico.ModelHelpers.schema_to_module_name(schema_name)
+        "#{module_base}.Models.#{model_name}"
+
+      # Inline schema worth generating — use operation_id + "Response".
+      inline_response_schema_generatable?(responses) ->
+        model_name = Portico.ModelHelpers.schema_to_module_name(operation_id <> "_response")
+        "#{module_base}.Models.#{model_name}"
+
+      true ->
+        nil
+    end
+  end
+
+  def get_response_model(_, _, _), do: nil
+
+  defp inline_response_schema_generatable?(responses) do
+    case Portico.ModelHelpers.primary_response_schema(responses) do
+      %{"$ref" => _} ->
+        false
+
+      %{"type" => "array", "items" => %{"$ref" => _}} ->
+        false
+
+      %{"type" => "object", "properties" => props} when is_map(props) and map_size(props) > 0 ->
+        true
+
+      %{"properties" => props} when is_map(props) and map_size(props) > 0 ->
+        true
+
+      %{"type" => "array", "items" => %{"properties" => props}}
+      when is_map(props) and map_size(props) > 0 ->
+        true
+
+      _ ->
+        false
+    end
   end
 end
