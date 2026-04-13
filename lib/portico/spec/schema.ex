@@ -261,11 +261,11 @@ defmodule Portico.Spec.Schema do
         true
 
       # Also extract arrays of objects (common for list endpoints)
-      %{"type" => "array", "items" => %{"type" => "object", "properties" => props}} 
+      %{"type" => "array", "items" => %{"type" => "object", "properties" => props}}
       when is_map(props) and map_size(props) > 0 ->
         true
-        
-      %{"type" => "array", "items" => %{"properties" => props}} 
+
+      %{"type" => "array", "items" => %{"properties" => props}}
       when is_map(props) and map_size(props) > 0 ->
         true
 
