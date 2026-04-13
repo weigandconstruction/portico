@@ -91,6 +91,17 @@ defmodule Portico.HelpersTest do
       assert Helpers.tag_to_module_name("3rd-party-integrations") == "N3rdPartyIntegrations"
       assert Helpers.tag_to_module_name("404-handlers") == "N404Handlers"
     end
+
+    test "handles dotted tags (like Microsoft Graph)" do
+      assert Helpers.tag_to_module_name("users.directoryObject") == "UsersDirectoryObject"
+
+      assert Helpers.tag_to_module_name("users.oauth2PermissionGrant") ==
+               "UsersOauth2PermissionGrant"
+
+      assert Helpers.tag_to_module_name("teams.channel.messages") == "TeamsChannelMessages"
+      assert Helpers.tag_to_module_name("microsoft.graph.user") == "MicrosoftGraphUser"
+      assert Helpers.tag_to_module_name("api.v2.endpoints") == "ApiV2Endpoints"
+    end
   end
 
   describe "tag_to_filename/1" do
@@ -114,7 +125,7 @@ defmodule Portico.HelpersTest do
       assert Helpers.tag_to_filename("Construction Financials/budget") ==
                "construction_financials_budget"
 
-      assert Helpers.tag_to_filename("API/v2.0/endpoints") == "api_v20_endpoints"
+      assert Helpers.tag_to_filename("API/v2.0/endpoints") == "api_v2_0_endpoints"
     end
 
     test "removes invalid characters and normalizes" do
@@ -134,9 +145,20 @@ defmodule Portico.HelpersTest do
 
     test "handles tags starting with numbers" do
       assert Helpers.tag_to_filename("1-Click Applications") == "n1_click_applications"
-      assert Helpers.tag_to_filename("2FA/authentication") == "n2fa_authentication"
+      assert Helpers.tag_to_filename("2FA/authentication") == "n2_fa_authentication"
       assert Helpers.tag_to_filename("3rd-party-integrations") == "n3rd_party_integrations"
       assert Helpers.tag_to_filename("404-handlers") == "n404_handlers"
+    end
+
+    test "handles dotted tags (like Microsoft Graph)" do
+      assert Helpers.tag_to_filename("users.directoryObject") == "users_directory_object"
+
+      assert Helpers.tag_to_filename("users.oauth2PermissionGrant") ==
+               "users_oauth2_permission_grant"
+
+      assert Helpers.tag_to_filename("teams.channel.messages") == "teams_channel_messages"
+      assert Helpers.tag_to_filename("microsoft.graph.user") == "microsoft_graph_user"
+      assert Helpers.tag_to_filename("api.v2.endpoints") == "api_v2_endpoints"
     end
   end
 
@@ -167,7 +189,7 @@ defmodule Portico.HelpersTest do
       assert length(result["content"]) == 2
     end
 
-    test "uses first tag when operation has multiple tags" do
+    test "includes operation under all tags when operation has multiple tags" do
       paths = [
         %SpecPath{
           path: "/items",
@@ -180,9 +202,22 @@ defmodule Portico.HelpersTest do
       result = Helpers.group_operations_by_tag(paths)
 
       assert Map.has_key?(result, "primary")
-      assert not Map.has_key?(result, "secondary")
-      assert not Map.has_key?(result, "tertiary")
+      assert Map.has_key?(result, "secondary")
+      assert Map.has_key?(result, "tertiary")
       assert length(result["primary"]) == 1
+      assert length(result["secondary"]) == 1
+      assert length(result["tertiary"]) == 1
+
+      # Verify the same operation appears under each tag
+      [{path1, op1}] = result["primary"]
+      [{path2, op2}] = result["secondary"]
+      [{path3, op3}] = result["tertiary"]
+      assert path1.path == "/items"
+      assert path2.path == "/items"
+      assert path3.path == "/items"
+      assert op1.method == "get"
+      assert op2.method == "get"
+      assert op3.method == "get"
     end
 
     test "falls back to path when no tags are present" do

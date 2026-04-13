@@ -24,8 +24,8 @@ portico-*.tar
 
 # generated files for development
 config.exs
-*.json
-*.yaml
+/*.json
+/*.yaml
 
 .elixir_ls
 

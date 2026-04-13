@@ -94,10 +94,10 @@ defmodule Portico.Spec.ParameterTest do
         {"PascalCase", "pascal_case"},
         {"kebab-case", "kebabcase"},
         {"snake_case", "snake_case"},
-        {"with.dots", "with/dots"},
+        {"with.dots", "with_dots"},
         {"with[brackets]", "with_brackets"},
         {"with-multiple-dashes", "withmultipledashes"},
-        {"Mixed-Case_and.dots[brackets]", "mixed_case_and/dots_brackets"},
+        {"Mixed-Case_and.dots[brackets]", "mixed_case_and_dots_brackets"},
         {"filters[origin_id]", "filters_origin_id"},
         {"filters[search]", "filters_search"},
         {"filters[created_at]", "filters_created_at"},
@@ -114,6 +114,53 @@ defmodule Portico.Spec.ParameterTest do
 
         assert param.name == input_name
         assert param.internal_name == expected_internal
+      end
+    end
+
+    test "handles comparison operators in parameter names" do
+      test_cases = [
+        # Less than
+        {"DateSent<", "date_sent_lt"},
+        {"value<", "value_lt"},
+        {"created_at<", "created_at_lt"},
+        # Greater than
+        {"DateSent>", "date_sent_gt"},
+        {"value>", "value_gt"},
+        {"updated_at>", "updated_at_gt"},
+        # Less than or equal
+        {"DateSent<=", "date_sent_lte"},
+        {"price<=", "price_lte"},
+        {"count<=", "count_lte"},
+        # Greater than or equal
+        {"DateSent>=", "date_sent_gte"},
+        {"price>=", "price_gte"},
+        {"score>=", "score_gte"},
+        # Equal
+        {"status=", "status_eq"},
+        {"type=", "type_eq"},
+        # Not equal (both styles)
+        {"status!=", "status_ne"},
+        {"type<>", "type_ne"},
+        # Complex cases with brackets (like Stripe API)
+        {"created[lt]", "created_lt"},
+        {"created[gt]", "created_gt"},
+        {"created[lte]", "created_lte"},
+        {"created[gte]", "created_gte"},
+        # Mixed cases
+        {"DateCreated>=", "date_created_gte"},
+        {"user-count<", "usercount_lt"},
+        {"filters[price]>=", "filters_price_gte"}
+      ]
+
+      for {input_name, expected_internal} <- test_cases do
+        input = %{"name" => input_name, "in" => "query"}
+        param = Parameter.parse(input)
+
+        assert param.name == input_name,
+               "Expected name to be #{input_name}, got #{param.name}"
+
+        assert param.internal_name == expected_internal,
+               "Expected internal_name to be #{expected_internal} for input #{input_name}, got #{param.internal_name}"
       end
     end
 

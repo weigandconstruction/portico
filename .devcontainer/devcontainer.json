@@ -1,0 +1,89 @@
+{
+  "name": "Elixir Stack",
+  "dockerComposeFile": ["docker-compose.yml"],
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "remoteUser": "vscode",
+
+  // Minimum host environment requirements
+  "hostRequirements": {
+    "cpus": 8,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+
+  // Configure tool-specific properties.
+  "customizations": {
+    // Configure properties specific to VS Code.
+    "vscode": {
+      // Add the IDs of extensions you want installed when the container is created.
+      "extensions": [
+        "github.copilot",
+        "github.vscode-github-actions",
+        "ExpertLSP.expert",
+        "phoenixframework.phoenix",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "redhat.vscode-yaml",
+        "stackbreak.comment-divider",
+        "eamodio.gitlens"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.osx": "zsh",
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.formatOnSave": true,
+        "github.copilot.enable": {
+          "*": true,
+          "plaintext": true,
+          "markdown": false,
+          "scminput": false,
+          "yaml": false,
+          "phoenix-heex": true
+        },
+        "[elixir]": {
+          "rewrap.autoWrap.enabled": false
+        },
+        "[html-eex]": {
+          "rewrap.autoWrap.enabled": false,
+          "editor.defaultFormatter": "ExpertLSP.expert"
+        },
+        "[phoenix-heex]": {
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "ExpertLSP.expert"
+        },
+        "emmet.includeLanguages": {
+          "phoenix-heex": "html"
+        },
+        "files.associations": {
+          "*.heex": "phoenix-heex"
+        },
+        "search.exclude": {
+          "**/heroicons": true
+        }
+      }
+    }
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "userUid": "1000",
+      "userGid": "1000",
+      "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22",
+      "nodeGypDependencies": false
+    },
+    "ghcr.io/devcontainers/features/sshd:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": {
+    "mix-setup": "mix local.hex --force && mix local.rebar --force && mix archive.install --force hex phx_new && cd ${containerWorkspaceFolder}",
+    "claude": "curl -fsSL https://claude.ai/install.sh | bash",
+    "codex": "npm i -g @openai/codex"
+  }
+}
