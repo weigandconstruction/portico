@@ -155,10 +155,12 @@ defmodule AutomaticModelConversionTest do
       assert model_code =~ "field :published_at, :utc_datetime"
       assert model_code =~ "field :author, :map"
 
-      # Verify it uses Ecto.Schema
+      # Verify it uses Ecto.Schema and aliases the *local* ModelHelpers —
+      # generated code must not reference Portico at runtime.
       assert model_code =~ "use Ecto.Schema"
       assert model_code =~ "import Ecto.Changeset"
-      assert model_code =~ "alias Portico.Runtime.ModelHelpers"
+      assert model_code =~ "alias EctoTestAPI.ModelHelpers"
+      refute model_code =~ "Portico.Runtime.ModelHelpers"
     end
 
     test "no models directory is created with --no-models flag", %{

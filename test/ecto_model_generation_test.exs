@@ -135,8 +135,11 @@ defmodule EctoModelGenerationTest do
       model_file = Path.join(temp_dir, "lib/model_test_api/models/user.ex")
       content = File.read!(model_file)
 
-      # Check for centralized helpers usage
-      assert content =~ "alias Portico.Runtime.ModelHelpers"
+      # Aliases the *local* ModelHelpers module — generated code must not
+      # reference Portico at runtime.
+      assert content =~ "alias ModelTestAPI.ModelHelpers"
+      refute content =~ "Portico.Runtime.ModelHelpers"
+
       assert content =~ "ModelHelpers.normalize_params"
       assert content =~ "ModelHelpers.apply_changeset_permissively"
       assert content =~ "ModelHelpers.struct_to_json"
@@ -145,6 +148,17 @@ defmodule EctoModelGenerationTest do
       refute content =~ "defp parse_date"
       refute content =~ "defp parse_datetime"
       refute content =~ "defp serialize_value"
+    end
+
+    test "generates a self-contained ModelHelpers module in the API tree", %{temp_dir: temp_dir} do
+      helpers_file = Path.join(temp_dir, "lib/model_test_api/model_helpers.ex")
+      assert File.exists?(helpers_file)
+
+      content = File.read!(helpers_file)
+      assert content =~ "defmodule ModelTestAPI.ModelHelpers do"
+      assert content =~ "def normalize_params"
+      assert content =~ "def struct_to_json"
+      assert content =~ "def apply_changeset_permissively"
     end
 
     test "generates from_json and to_json functions", %{temp_dir: temp_dir} do

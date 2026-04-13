@@ -736,17 +736,18 @@ defmodule Mix.Tasks.Portico.GenerateTest do
         # Check that pet API was generated
         assert File.exists?("lib/filtered_api/api/pets.ex")
 
-        # Check that pet inline models were generated
+        # Check that pet inline models were generated. Response models for
+        # endpoints whose schema is `$ref` are intentionally NOT generated —
+        # those operations point straight at the component model.
         assert File.exists?("lib/filtered_api/models/create_pet_request.ex")
-        assert File.exists?("lib/filtered_api/models/create_pet_response201.ex")
-        assert File.exists?("lib/filtered_api/models/list_pets_response.ex")
+        assert File.exists?("lib/filtered_api/models/create_pet_response.ex")
 
         # Check that user API was NOT generated
         refute File.exists?("lib/filtered_api/api/users.ex")
 
         # Check that user inline models were NOT generated
         refute File.exists?("lib/filtered_api/models/create_user_request.ex")
-        refute File.exists?("lib/filtered_api/models/create_user_response201.ex")
+        refute File.exists?("lib/filtered_api/models/create_user_response.ex")
 
         # Check that REFERENCED component schemas ARE generated when filtering
         # (Pet is referenced by the pets operations)
@@ -822,10 +823,12 @@ defmodule Mix.Tasks.Portico.GenerateTest do
           Mix.Tasks.Portico.Generate.run(["--module", "FullAPI", "--spec", spec_file])
         end)
 
-        # Should generate both component schemas and inline schemas
+        # Should generate both component schemas and inline schemas. The
+        # inline response model uses the canonical "Response" suffix
+        # regardless of the actual 2xx status code.
         assert File.exists?("lib/full_api/models/pet.ex")
         assert File.exists?("lib/full_api/models/create_pet_request.ex")
-        assert File.exists?("lib/full_api/models/create_pet_response201.ex")
+        assert File.exists?("lib/full_api/models/create_pet_response.ex")
       end)
     end
 

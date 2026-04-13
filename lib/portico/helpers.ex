@@ -561,9 +561,13 @@ defmodule Portico.Helpers do
   Gets the response model module name for an operation if available.
   Returns nil if no model is found or models are not generated.
 
-  Since schemas might be expanded inline (without $ref), we try multiple approaches:
-  1. Look for a $ref in the response schema
-  2. Use the operation_id to find inline response models (e.g., GetPostResponse)
+  Resolution order:
+    1. If the response schema (or its `items` for arrays) is a ref to a
+       named component schema, return that component's module. No
+       duplicate model is generated.
+    2. Otherwise, if the response has an inline schema, return the
+       manufactured `<OperationId>Response` module name — this matches the
+       suffix used by `Portico.Spec.Schema.extract_inline_schemas/1`.
   """
   @spec get_response_model(Operation.t(), String.t(), boolean()) :: String.t() | nil
   def get_response_model(
@@ -572,32 +576,44 @@ defmodule Portico.Helpers do
         generate_models
       )
       when generate_models and is_binary(operation_id) do
-    # First try to extract a ref-based model name
-    case Portico.ModelHelpers.extract_response_schema(responses) do
-      nil ->
-        # If no ref found, check if there's a 2xx response with inline schema
-        # and use the operation_id to generate the model name
-        success_response =
-          Enum.find(responses, fn {status, _} ->
-            String.starts_with?(to_string(status), "2")
-          end)
-
-        case success_response do
-          {_, %Portico.Spec.Response{content: %{"application/json" => %{"schema" => schema}}}}
-          when is_map(schema) and map_size(schema) > 0 ->
-            # Generate model name from operation_id (e.g., getPost -> GetPostResponse)
-            model_name = Portico.ModelHelpers.schema_to_module_name(operation_id <> "_response")
-            "#{module_base}.Models.#{model_name}"
-
-          _ ->
-            nil
-        end
-
-      schema_name ->
+    cond do
+      # Named component schema — reference it directly.
+      schema_name = Portico.ModelHelpers.extract_response_schema(responses) ->
         model_name = Portico.ModelHelpers.schema_to_module_name(schema_name)
         "#{module_base}.Models.#{model_name}"
+
+      # Inline schema worth generating — use operation_id + "Response".
+      inline_response_schema_generatable?(responses) ->
+        model_name = Portico.ModelHelpers.schema_to_module_name(operation_id <> "_response")
+        "#{module_base}.Models.#{model_name}"
+
+      true ->
+        nil
     end
   end
 
   def get_response_model(_, _, _), do: nil
+
+  defp inline_response_schema_generatable?(responses) do
+    case Portico.ModelHelpers.primary_response_schema(responses) do
+      %{"$ref" => _} ->
+        false
+
+      %{"type" => "array", "items" => %{"$ref" => _}} ->
+        false
+
+      %{"type" => "object", "properties" => props} when is_map(props) and map_size(props) > 0 ->
+        true
+
+      %{"properties" => props} when is_map(props) and map_size(props) > 0 ->
+        true
+
+      %{"type" => "array", "items" => %{"properties" => props}}
+      when is_map(props) and map_size(props) > 0 ->
+        true
+
+      _ ->
+        false
+    end
+  end
 end

@@ -221,52 +221,72 @@ defmodule Portico.ModelHelpers do
   def should_generate_model?(_), do: false
 
   @doc """
-  Extracts response schema from an operation's responses.
-  Looks for the success response (2xx) and returns its schema if present.
+  Extracts the named component schema referenced by an operation's
+  primary 2xx response, if any.
+
+  Recognizes both direct refs (`{"$ref": "#/components/schemas/User"}`)
+  and array-of-ref shapes (`{"type": "array", "items": {"$ref": ...}}`).
+  Returns the schema's short name (e.g. `"User"`) or `nil` if the response
+  has no referenced component schema.
   """
   @spec extract_response_schema(map()) :: String.t() | nil
   def extract_response_schema(responses) when is_map(responses) do
-    # Find the first 2xx response with a schema
     responses
-    |> Enum.find(fn {status, response} ->
-      String.starts_with?(to_string(status), "2") and has_json_schema?(response)
-    end)
+    |> primary_success_response()
     |> case do
-      {_status, response} -> extract_json_schema_ref(response)
+      {_status, response} -> json_schema_ref_name(response)
       nil -> nil
     end
   end
 
   def extract_response_schema(_), do: nil
 
-  defp has_json_schema?(%Portico.Spec.Response{content: content}) do
-    has_json_schema?(content)
-  end
-
-  defp has_json_schema?(response) when is_map(response) do
-    case response["content"] do
-      %{"application/json" => %{"schema" => schema}} when is_map(schema) -> true
-      _ -> false
+  @doc """
+  Returns the raw JSON response schema map for an operation's primary 2xx
+  response, or `nil` if none. Used for shape inspection (e.g. "is this an
+  array or a single object?") separately from ref extraction.
+  """
+  @spec primary_response_schema(map()) :: map() | nil
+  def primary_response_schema(responses) when is_map(responses) do
+    case primary_success_response(responses) do
+      {_status, response} -> json_schema(response)
+      nil -> nil
     end
   end
 
-  defp has_json_schema?(_), do: false
+  def primary_response_schema(_), do: nil
 
-  defp extract_json_schema_ref(%Portico.Spec.Response{content: content}) do
-    extract_json_schema_ref(content)
+  defp primary_success_response(responses) when is_map(responses) do
+    responses
+    |> Enum.filter(fn {status, response} ->
+      String.starts_with?(to_string(status), "2") and has_json_schema?(response)
+    end)
+    |> Enum.sort_by(fn {status, _} -> status end)
+    |> List.first()
   end
 
-  defp extract_json_schema_ref(response) when is_map(response) do
+  defp primary_success_response(_), do: nil
+
+  defp has_json_schema?(response), do: not is_nil(json_schema(response))
+
+  defp json_schema(%Portico.Spec.Response{content: content}), do: json_schema(content)
+
+  defp json_schema(response) when is_map(response) do
     case response["content"] || response do
-      %{"application/json" => %{"schema" => %{"$ref" => ref}}} ->
-        Schema.resolve_ref_name(ref)
-
-      _ ->
-        nil
+      %{"application/json" => %{"schema" => schema}} when is_map(schema) -> schema
+      _ -> nil
     end
   end
 
-  defp extract_json_schema_ref(_), do: nil
+  defp json_schema(_), do: nil
+
+  defp json_schema_ref_name(response) do
+    case json_schema(response) do
+      %{"$ref" => ref} -> Schema.resolve_ref_name(ref)
+      %{"type" => "array", "items" => %{"$ref" => ref}} -> Schema.resolve_ref_name(ref)
+      _ -> nil
+    end
+  end
 
   @doc """
   Groups operations by their response model type.

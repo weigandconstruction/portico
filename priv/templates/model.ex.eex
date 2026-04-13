@@ -10,7 +10,7 @@ defmodule <%= @module %>.Models.<%= @model_name %> do
 
   use Ecto.Schema
   import Ecto.Changeset
-  alias Portico.Runtime.ModelHelpers
+  alias <%= @module %>.ModelHelpers
 
   @type t :: %__MODULE__{}
 
@@ -38,8 +38,11 @@ defmodule <%= @module %>.Models.<%= @model_name %> do
   def from_json(nil), do: nil
 
   def from_json(params) when is_map(params) do
-    # Convert string keys to atoms for the fields we care about
-    params = ModelHelpers.normalize_params(params)
+    <%= if @field_mappings != [] do %># Map JSON keys (often camelCase) back to their snake_case field names.
+    json_to_field = %{<%= for {json_name, field_name} <- @field_mappings do %>
+      "<%= json_name %>" => "<%= field_name %>",<% end %>
+    }
+    params = ModelHelpers.normalize_params(params, json_to_field)<% else %>params = ModelHelpers.normalize_params(params)<% end %>
 
     %__MODULE__{}
     |> cast(params, [<%= @cast_fields |> Enum.map(&inspect/1) |> Enum.join(", ") %>])<%= if length(@embedded_fields) > 0 do %>

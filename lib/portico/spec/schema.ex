@@ -200,19 +200,27 @@ defmodule Portico.Spec.Schema do
 
   defp extract_schemas_from_responses(path, method, operation_id, responses)
        when is_map(responses) do
-    responses
-    |> Enum.flat_map(fn {status_code, response} ->
-      case response do
-        %Portico.Spec.Response{content: content} ->
-          extract_schemas_from_content(path, method, operation_id, status_code, content)
+    # Only extract an inline schema from the primary 2xx response. Using
+    # every 2xx response can produce duplicate model names (e.g. if 200 and
+    # 201 coexist) and picking the lowest code matches what downstream
+    # helpers assume when they look up the response model for an operation.
+    case primary_success_response(responses) do
+      {_status, %Portico.Spec.Response{content: content}} ->
+        extract_schemas_from_content(path, method, operation_id, content)
 
-        _ ->
-          []
-      end
-    end)
+      _ ->
+        []
+    end
   end
 
   defp extract_schemas_from_responses(_, _, _, _), do: []
+
+  defp primary_success_response(responses) do
+    responses
+    |> Enum.filter(fn {status, _} -> String.starts_with?(to_string(status), "2") end)
+    |> Enum.sort_by(fn {status, _} -> status end)
+    |> List.first()
+  end
 
   defp extract_schemas_from_request_body(path, method, operation_id, request_body)
        when is_map(request_body) do
@@ -232,13 +240,12 @@ defmodule Portico.Spec.Schema do
 
   defp extract_schemas_from_request_body(_, _, _, _), do: []
 
-  defp extract_schemas_from_content(path, method, operation_id, status_code, content)
+  defp extract_schemas_from_content(path, method, operation_id, content)
        when is_map(content) do
     case content["application/json"] do
       %{"schema" => schema} when is_map(schema) ->
-        if should_extract_schema?(schema) and String.starts_with?(to_string(status_code), "2") do
-          suffix = if status_code == "200", do: "Response", else: "Response#{status_code}"
-          name = generate_schema_name(path, method, operation_id, suffix)
+        if should_extract_schema?(schema) do
+          name = generate_schema_name(path, method, operation_id, "Response")
           [{name, parse(schema)}]
         else
           []
@@ -249,28 +256,41 @@ defmodule Portico.Spec.Schema do
     end
   end
 
-  defp extract_schemas_from_content(_, _, _, _, _), do: []
+  defp extract_schemas_from_content(_, _, _, _), do: []
 
   defp should_extract_schema?(schema) when is_map(schema) do
-    # Extract if it's an object with properties OR an array of objects (not just a ref or primitive type)
-    case schema do
-      %{"type" => "object", "properties" => props} when is_map(props) and map_size(props) > 0 ->
-        true
-
-      %{"properties" => props} when is_map(props) and map_size(props) > 0 ->
-        true
-
-      # Also extract arrays of objects (common for list endpoints)
-      %{"type" => "array", "items" => %{"type" => "object", "properties" => props}}
-      when is_map(props) and map_size(props) > 0 ->
-        true
-
-      %{"type" => "array", "items" => %{"properties" => props}}
-      when is_map(props) and map_size(props) > 0 ->
-        true
-
-      _ ->
+    # Skip anything that is (or wraps) a named component schema — those
+    # already have a model generated from components.schemas, so we don't
+    # want to duplicate them under a manufactured response/request name.
+    cond do
+      Map.has_key?(schema, "$ref") ->
         false
+
+      match?(%{"type" => "array", "items" => %{"$ref" => _}}, schema) ->
+        false
+
+      true ->
+        case schema do
+          %{"type" => "object", "properties" => props}
+          when is_map(props) and map_size(props) > 0 ->
+            true
+
+          %{"properties" => props} when is_map(props) and map_size(props) > 0 ->
+            true
+
+          # Arrays of inline objects (common for list endpoints where the
+          # items are declared inline rather than via $ref).
+          %{"type" => "array", "items" => %{"type" => "object", "properties" => props}}
+          when is_map(props) and map_size(props) > 0 ->
+            true
+
+          %{"type" => "array", "items" => %{"properties" => props}}
+          when is_map(props) and map_size(props) > 0 ->
+            true
+
+          _ ->
+            false
+        end
     end
   end
 

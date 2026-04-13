@@ -121,36 +121,9 @@ defmodule Mix.Tasks.Portico.Generate do
 
     # Generate models unless --no-models flag is set
     if generate_models do
-      # If filtering by tags, also parse unresolved spec to find refs
-      unresolved_spec = if tag_filters, do: parse_unresolved_spec(opts[:spec]), else: nil
-      generate_model_modules(spec, opts, tag_filters, unresolved_spec)
+      generate_model_modules(spec, opts, tag_filters)
     end
   end
-
-  defp parse_unresolved_spec(source) do
-    # Parse spec without resolving refs to see what refs are used
-    content =
-      if String.starts_with?(source, "https://") do
-        Portico.Fetch.fetch(source)
-      else
-        {File.read!(source), path_to_content_type(source)}
-      end
-
-    parse_content(content)
-  end
-
-  defp path_to_content_type(path) do
-    case Path.extname(path) do
-      ".json" -> :json
-      ".yaml" -> :yaml
-      ".yml" -> :yaml
-      _ -> raise("Unsupported file extension: #{Path.extname(path)}")
-    end
-  end
-
-  defp parse_content({content, :json}), do: Jason.decode!(content)
-  defp parse_content({content, :yaml}), do: YamlElixir.read_from_string!(content)
-  defp parse_content(_), do: raise("Unsupported content type or malformed data")
 
   defp copy_client(opts) do
     source_path = Path.join(:code.priv_dir(:portico), "templates/client.ex.eex")
@@ -276,50 +249,137 @@ defmodule Mix.Tasks.Portico.Generate do
     Enum.empty?(Enum.filter(tag_keys, &(&1 in tag_filters)))
   end
 
-  defp generate_model_modules(spec, opts, tag_filters, unresolved_spec) do
-    all_schemas =
-      if tag_filters && unresolved_spec do
-        # When filtering, include both inline schemas and component schemas referenced by filtered operations
-        filtered_spec = filter_spec_by_tags(spec, tag_filters)
-        inline_schemas = Portico.Spec.Schema.extract_inline_schemas(filtered_spec)
+  defp generate_model_modules(spec, opts, tag_filters) do
+    # Tag filtering: restrict the operations we look at. Schema refs are now
+    # preserved through resolution, so we can always walk the (filtered)
+    # spec to discover both inline schemas and referenced component schemas.
+    scoped_spec =
+      if tag_filters, do: filter_spec_by_tags(spec, tag_filters), else: spec
 
-        # Find component schema refs used in the filtered operations from the unresolved spec
-        component_refs = extract_refs_from_filtered_spec(unresolved_spec, tag_filters)
+    inline_schemas = Portico.Spec.Schema.extract_inline_schemas(scoped_spec)
 
-        # Get the actual schemas for those refs
-        tracked_component_schemas =
-          component_refs
-          |> Enum.filter(&String.starts_with?(&1, "#/components/schemas/"))
-          |> Enum.map(&Portico.Spec.Schema.resolve_ref_name/1)
-          # Remove nils
-          |> Enum.filter(& &1)
-          |> Enum.reduce(%{}, fn schema_name, acc ->
-            # Get the schema from components if it exists
-            case get_in(spec.components, ["schemas", schema_name]) do
-              nil -> acc
-              schema -> Map.put(acc, schema_name, Portico.Spec.Schema.parse(schema))
-            end
-          end)
-
-        Map.merge(tracked_component_schemas, inline_schemas)
+    component_schemas =
+      if tag_filters do
+        # Only generate component schemas that are actually referenced from
+        # the filtered operations (plus transitive refs between components).
+        referenced_component_schemas(scoped_spec, spec)
       else
-        # Normal behavior: extract all schemas
-        component_schemas = Portico.Spec.Schema.extract_schemas(spec)
-        inline_schemas = Portico.Spec.Schema.extract_inline_schemas(spec)
-        Map.merge(component_schemas, inline_schemas)
+        Portico.Spec.Schema.extract_schemas(spec)
       end
 
-    if map_size(all_schemas) > 0 do
-      # Create models directory
-      create_directory("lib/#{opts[:name]}/models")
+    all_schemas = Map.merge(component_schemas, inline_schemas)
 
-      # Generate a model module for each schema that should be generated
-      for {schema_name, schema} <- all_schemas,
-          Portico.ModelHelpers.should_generate_model?(schema) do
+    generatable =
+      Enum.filter(all_schemas, fn {_name, schema} ->
+        Portico.ModelHelpers.should_generate_model?(schema)
+      end)
+
+    if generatable != [] do
+      create_directory("lib/#{opts[:name]}/models")
+      # Copy the model-runtime helpers into the generated tree so consumers
+      # don't need portico as a runtime dependency — only ecto.
+      copy_model_helpers(opts)
+
+      for {schema_name, schema} <- generatable do
         generate_model_module(schema_name, schema, opts)
       end
     end
   end
+
+  defp copy_model_helpers(opts) do
+    source_path = Path.join(:code.priv_dir(:portico), "templates/model_helpers.ex.eex")
+
+    if File.exists?(source_path) do
+      copy_template(source_path, "lib/#{opts[:name]}/model_helpers.ex", opts, format_elixir: true)
+    end
+  end
+
+  # Walk the (tag-filtered) spec, collect all #/components/schemas/... refs
+  # reachable from operations, transitively chase their children, and return
+  # a map of parsed component schemas.
+  defp referenced_component_schemas(scoped_spec, full_spec) do
+    direct_refs = collect_schema_refs(scoped_spec)
+
+    expand_schema_refs(direct_refs, %{}, full_spec.components)
+  end
+
+  defp expand_schema_refs([], acc, _components), do: acc
+
+  defp expand_schema_refs([ref | rest], acc, components) do
+    name = Portico.Spec.Schema.resolve_ref_name(ref)
+
+    cond do
+      is_nil(name) ->
+        expand_schema_refs(rest, acc, components)
+
+      Map.has_key?(acc, name) ->
+        expand_schema_refs(rest, acc, components)
+
+      true ->
+        raw = get_in(components || %{}, ["schemas", name])
+
+        if is_nil(raw) do
+          expand_schema_refs(rest, acc, components)
+        else
+          nested = collect_schema_refs(raw)
+          acc = Map.put(acc, name, Portico.Spec.Schema.parse(raw))
+          expand_schema_refs(nested ++ rest, acc, components)
+        end
+    end
+  end
+
+  # Recursively collect every "$ref" whose target is a component schema,
+  # from anywhere inside a parsed Spec, Path, Operation, Response, raw map
+  # or list.
+  defp collect_schema_refs(value), do: value |> do_collect_refs() |> Enum.uniq()
+
+  defp do_collect_refs(%Portico.Spec{paths: paths, components: components}) do
+    # Walk all paths (operations) plus any raw content in components that
+    # itself holds refs (e.g. components.responses.Foo.content...schema).
+    # We deliberately skip components.schemas itself — those entries are
+    # collected on demand by expand_schema_refs as we chase them.
+    components_without_schemas =
+      case components do
+        %{} = m -> Map.drop(m, ["schemas"])
+        _ -> %{}
+      end
+
+    Enum.flat_map(paths || [], &do_collect_refs/1) ++
+      do_collect_refs(components_without_schemas)
+  end
+
+  defp do_collect_refs(%Portico.Spec.Path{operations: ops, parameters: params}) do
+    Enum.flat_map(ops || [], &do_collect_refs/1) ++
+      Enum.flat_map(params || [], &do_collect_refs/1)
+  end
+
+  defp do_collect_refs(%Portico.Spec.Operation{
+         parameters: params,
+         responses: responses,
+         request_body: body
+       }) do
+    Enum.flat_map(params || [], &do_collect_refs/1) ++
+      do_collect_refs(responses) ++
+      do_collect_refs(body)
+  end
+
+  defp do_collect_refs(%Portico.Spec.Parameter{schema: schema}), do: do_collect_refs(schema)
+
+  defp do_collect_refs(%Portico.Spec.Response{content: content}), do: do_collect_refs(content)
+
+  defp do_collect_refs(%{"$ref" => ref} = map) when is_binary(ref) do
+    schema_ref = if String.starts_with?(ref, "#/components/schemas/"), do: [ref], else: []
+    schema_ref ++ do_collect_refs(Map.delete(map, "$ref"))
+  end
+
+  defp do_collect_refs(map) when is_map(map) do
+    map
+    |> Map.values()
+    |> Enum.flat_map(&do_collect_refs/1)
+  end
+
+  defp do_collect_refs(list) when is_list(list), do: Enum.flat_map(list, &do_collect_refs/1)
+  defp do_collect_refs(_), do: []
 
   defp generate_model_module(schema_name, schema, opts) do
     model_name = Portico.ModelHelpers.schema_to_module_name(schema_name)
@@ -397,47 +457,4 @@ defmodule Mix.Tasks.Portico.Generate do
 
     %{spec | paths: filtered_paths}
   end
-
-  defp extract_refs_from_filtered_spec(unresolved_spec, tag_filters) do
-    # Extract all $ref values from the filtered operations in the unresolved spec
-    filtered_paths =
-      unresolved_spec["paths"]
-      |> Enum.flat_map(fn {_path, path_item} ->
-        path_item
-        |> Enum.filter(fn {method, _} ->
-          method in ["get", "post", "put", "patch", "delete", "options", "head"]
-        end)
-        |> Enum.filter(fn {_method, operation} ->
-          # Keep operations with matching tags
-          tags = operation["tags"] || []
-          Enum.any?(tags, &(&1 in tag_filters))
-        end)
-        |> Enum.flat_map(fn {_method, operation} ->
-          extract_refs_from_operation(operation)
-        end)
-      end)
-
-    MapSet.new(filtered_paths) |> MapSet.to_list()
-  end
-
-  defp extract_refs_from_operation(operation) do
-    # Recursively extract all $ref values from an operation
-    extract_refs_from_value(operation)
-  end
-
-  defp extract_refs_from_value(value) when is_map(value) do
-    if Map.has_key?(value, "$ref") do
-      [value["$ref"]]
-    else
-      value
-      |> Map.values()
-      |> Enum.flat_map(&extract_refs_from_value/1)
-    end
-  end
-
-  defp extract_refs_from_value(value) when is_list(value) do
-    Enum.flat_map(value, &extract_refs_from_value/1)
-  end
-
-  defp extract_refs_from_value(_), do: []
 end
