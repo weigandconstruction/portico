@@ -4,9 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        ELIXIR_VERSION: "1.19.5"
-        ERLANG_VERSION: "28.3"
-        DEBIAN_VERSION: "bookworm-20260223-slim"
+        ELIXIR_VERSION: "1.20.4"
+        ERLANG_VERSION: "29.0.6"
+        DEBIAN_VERSION: "bookworm-20260824-slim"
     volumes:
       - ..:/workspaces:cached
     environment:
