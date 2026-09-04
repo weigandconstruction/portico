@@ -95,6 +95,9 @@ defmodule Mix.Tasks.Portico.Generate do
   defp generate(opts) do
     spec = Portico.parse!(opts[:spec])
 
+    # Stamp the generation date once so all generated modules share it
+    opts = Keyword.put(opts, :generated_date, Portico.Helpers.generated_date())
+
     # Parse tag filters from CLI options or config file
     tag_filters = parse_tag_filters(opts)
 
