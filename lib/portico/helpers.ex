@@ -557,4 +557,23 @@ defmodule Portico.Helpers do
     param_list = Enum.join(param_types, ", ")
     "@spec #{function_name}(#{param_list}) :: {:ok, any()} | {:error, Exception.t()}"
   end
+
+  @doc """
+  Returns the current date in UTC, in ISO 8601 format (`YYYY-MM-DD`), for
+  stamping into generated code.
+
+  UTC is used so the stamp is independent of the machine's local timezone and
+  is reproducible regardless of where the client is generated.
+
+  ## Example:
+
+      iex> Regex.match?(~r/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/, Portico.Helpers.generated_date())
+      true
+
+  """
+  @spec generated_date() :: String.t()
+  def generated_date() do
+    Date.utc_today()
+    |> Date.to_iso8601()
+  end
 end
