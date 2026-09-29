@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Portico is an Elixir library for generating API clients from OpenAPI 3.0 specifications. It parses OpenAPI specs (JSON format) and generates structured Elixir modules with HTTP client functions.
+Portico is an Elixir library for generating API clients from OpenAPI 3.0 specifications. It parses OpenAPI 3 specs (JSON or YAML) and generates structured Elixir modules with HTTP client functions.
 
 ## Core Architecture
 
@@ -13,7 +13,7 @@ Portico is an Elixir library for generating API clients from OpenAPI 3.0 specifi
 - **Mix.Tasks.Portico.Generate**: Mix task that generates API client code from specs
 - **Templates**: EEx templates in `priv/templates/` for generating client and API modules
 
-The generation flow: OpenAPI JSON → parsed into Portico.Spec structs → processed through EEx templates → generated Elixir client modules.
+The generation flow: OpenAPI JSON/YAML → parsed into Portico.Spec structs → processed through EEx templates → generated Elixir client modules.
 
 ## Common Commands
 
@@ -85,5 +85,5 @@ client = MyAPI.Client.new(
 ## Workflow Reminders
 
 - When done making changes, run tests to confirm everything is working
+- Template changes should come with a case in `test/portico/generated_code_test.exs`, which compiles the generated code and fails on errors or warnings
 - Don't forget to run `mix format` after finishing code generation
-- Don't forget to run `mix credo` after finishing code generation and fix any issues

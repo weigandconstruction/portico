@@ -158,6 +158,7 @@ defmodule Mix.Tasks.Portico.Generate do
     # Filter operations by tags if filters are provided
     filtered_operations =
       if tag_filters do
+        warn_about_missing_tags(grouped_operations, tag_filters)
         filter_operations_by_tags(grouped_operations, tag_filters)
       else
         grouped_operations
@@ -279,6 +280,20 @@ defmodule Mix.Tasks.Portico.Generate do
 
     unless Map.has_key?(config, "tags") and is_list(config["tags"]) do
       raise "Config file must contain a 'tags' field with a list of tag names"
+    end
+  end
+
+  # Upstream specs rename tags, and a renamed tag silently generated nothing
+  defp warn_about_missing_tags(grouped_operations, tag_filters) do
+    case Enum.reject(tag_filters, &Map.has_key?(grouped_operations, &1)) do
+      [] ->
+        :ok
+
+      missing ->
+        Mix.shell().error(
+          "These tags aren't in the spec, so nothing was generated for them:\n" <>
+            Enum.map_join(missing, "\n", &"  * #{&1}")
+        )
     end
   end
 

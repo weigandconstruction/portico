@@ -272,7 +272,10 @@ defmodule Portico.Helpers do
 
   @doc """
   Returns all unique parameters for a given path and operation combination.
-  Combines path-level and operation-level parameters, removing duplicates by internal_name.
+  Combines path-level and operation-level parameters. An operation-level
+  parameter with the same name and location replaces the path-level one (as
+  OpenAPI specifies) but keeps its position, and anything left with a
+  duplicate internal_name is dropped.
 
   ## Examples:
 
@@ -284,7 +287,11 @@ defmodule Portico.Helpers do
   """
   @spec function_parameters(Path.t(), Operation.t()) :: [Parameter.t()]
   def function_parameters(%Path{} = path, %Operation{} = operation) do
-    (path.parameters ++ operation.parameters)
+    overrides = Map.new(operation.parameters, &{{&1.name, &1.in}, &1})
+
+    path.parameters
+    |> Enum.map(&Map.get(overrides, {&1.name, &1.in}, &1))
+    |> Kernel.++(operation.parameters)
     |> Enum.uniq_by(& &1.internal_name)
   end
 
@@ -735,7 +742,7 @@ defmodule Portico.Helpers do
   def schema_to_typespec(nil), do: "any()"
   def schema_to_typespec(%{"type" => "string"}), do: "String.t()"
   def schema_to_typespec(%{"type" => "integer"}), do: "integer()"
-  def schema_to_typespec(%{"type" => "number"}), do: "float()"
+  def schema_to_typespec(%{"type" => "number"}), do: "number()"
   def schema_to_typespec(%{"type" => "boolean"}), do: "boolean()"
   def schema_to_typespec(%{"type" => "array"}), do: "list()"
   def schema_to_typespec(%{"type" => "object"}), do: "map()"
