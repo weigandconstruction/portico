@@ -337,6 +337,34 @@ defmodule Portico.GeneratedCodeTest do
       refute Map.has_key?(sent.headers, "x-trace")
     end
 
+    test "list query parameters as repeated keys, or comma-separated with explode: false", %{
+      dir: dir
+    } do
+      array = %{"type" => "array", "items" => %{"type" => "integer"}}
+
+      params = [
+        param("ids", "query", %{"schema" => array}),
+        param("tags", "query", %{"schema" => array, "explode" => false}),
+        param("q", "query")
+      ]
+
+      root = generate!(dir, %{"/things" => %{"get" => op(%{"parameters" => params})}})
+      {:ok, sent} = call(root, Things, :get_things, [[ids: [1, 2], tags: [3, 4], q: "x"]])
+
+      assert URI.parse(sent.url).query == "ids=1&ids=2&tags=3%2C4&q=x"
+    end
+
+    test "path parameters escaped so they stay one path segment", %{dir: dir} do
+      params = [param("id", "path", %{"required" => true})]
+      root = generate!(dir, %{"/things/{id}/items" => %{"get" => op(%{"parameters" => params})}})
+
+      {:ok, sent} = call(root, Things, :get_things_id_items, ["a/b c?d#e"])
+      assert sent.url == "https://api.test/things/a%2Fb%20c%3Fd%23e/items"
+
+      {:ok, sent} = call(root, Things, :get_things_id_items, [42])
+      assert sent.url == "https://api.test/things/42/items"
+    end
+
     test "a form body when that's the only content type", %{dir: dir} do
       root = generate!(dir, body_paths(["application/x-www-form-urlencoded"]))
       {:ok, sent} = call(root, Things, :post_things, [%{name: "a b", size: 1}])

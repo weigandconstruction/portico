@@ -35,7 +35,8 @@ defmodule Portico.Spec.Parameter do
   - Reserved Elixir keywords get `_` suffix
 
   Path parameters are always required, as OpenAPI requires, even when a spec
-  leaves out `required: true`.
+  leaves out `required: true`. `explode` defaults the way OpenAPI does: true
+  for the `form` style (the default for query and cookie parameters).
 
   ## Examples
 
@@ -114,7 +115,7 @@ defmodule Portico.Spec.Parameter do
       required: parameter["required"] || parameter["in"] == "path",
       deprecated: parameter["deprecated"] || false,
       style: parameter["style"],
-      explode: parameter["explode"] || false,
+      explode: Map.get(parameter, "explode", default_explode(parameter)),
       allow_reserved: parameter["allowReserved"] || false,
       allow_empty_value: parameter["allowEmptyValue"] || false,
       schema: parameter["schema"],
@@ -142,6 +143,12 @@ defmodule Portico.Spec.Parameter do
     |> to_identifier(name)
     |> escape_parameter_name()
   end
+
+  # OpenAPI defaults explode to true for the form style, which is the default
+  # style for query and cookie parameters
+  defp default_explode(%{"style" => style}), do: style == "form"
+  defp default_explode(%{"in" => location}), do: location in ["query", "cookie"]
+  defp default_explode(_), do: false
 
   # Elixir variables may end in one `?` or `!`, so a terminal one is kept
   defp to_identifier(name, original) do

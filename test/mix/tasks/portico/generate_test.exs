@@ -259,7 +259,7 @@ defmodule Mix.Tasks.Portico.GenerateTest do
         content_content = File.read!("lib/test_api/api/content.ex")
 
         # Should handle path parameters
-        assert content_content =~ "url: \"/posts/\#{id}\""
+        assert content_content =~ "url: \"/posts/\#{encode_path(id)}\""
       end)
     end
   end

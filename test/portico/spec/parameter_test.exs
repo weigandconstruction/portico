@@ -4,6 +4,17 @@ defmodule Portico.Spec.ParameterTest do
   alias Portico.Spec.Parameter
 
   describe "parse/1" do
+    test "defaults explode the way OpenAPI does" do
+      assert Parameter.parse(%{"name" => "a", "in" => "query"}).explode
+      assert Parameter.parse(%{"name" => "a", "in" => "cookie"}).explode
+      refute Parameter.parse(%{"name" => "a", "in" => "header"}).explode
+      refute Parameter.parse(%{"name" => "a", "in" => "path"}).explode
+
+      refute Parameter.parse(%{"name" => "a", "in" => "query", "style" => "spaceDelimited"}).explode
+
+      refute Parameter.parse(%{"name" => "a", "in" => "query", "explode" => false}).explode
+    end
+
     test "treats path parameters as required even when the spec doesn't" do
       assert Parameter.parse(%{"name" => "id", "in" => "path"}).required
       assert Parameter.parse(%{"name" => "id", "in" => "path", "required" => false}).required
@@ -46,7 +57,7 @@ defmodule Portico.Spec.ParameterTest do
       assert param.required == false
       assert param.deprecated == false
       assert param.style == nil
-      assert param.explode == false
+      assert param.explode == true
       assert param.allow_reserved == false
       assert param.allow_empty_value == false
       assert param.schema == nil
@@ -109,7 +120,8 @@ defmodule Portico.Spec.ParameterTest do
 
       assert param.required == false
       assert param.deprecated == false
-      assert param.explode == false
+      # OpenAPI's default for query parameters
+      assert param.explode == true
       assert param.allow_reserved == false
       assert param.allow_empty_value == false
     end
