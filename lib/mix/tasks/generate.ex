@@ -98,9 +98,31 @@ defmodule Mix.Tasks.Portico.Generate do
     # Parse tag filters from CLI options or config file
     tag_filters = parse_tag_filters(opts)
 
+    # Generation details only go into the client, so regenerating an unchanged
+    # spec doesn't touch every API module
+    client_opts =
+      opts
+      |> Keyword.put(:spec_info, spec.info || %{})
+      |> Keyword.put(:portico_ref, portico_ref())
+      |> Keyword.put(:generated_on, Date.to_iso8601(Date.utc_today()))
+
     create_directory("lib/#{opts[:name]}")
-    copy_client(opts)
+    copy_client(client_opts)
     generate_api_modules(spec, opts, tag_filters)
+  end
+
+  # Commit of the Portico checkout running the task, or the app version when
+  # Portico isn't a git dependency (e.g. running inside Portico itself)
+  defp portico_ref do
+    path = Mix.Project.deps_paths()[:portico]
+
+    with true <- is_binary(path) and File.dir?(Path.join(path, ".git")),
+         git when is_binary(git) <- System.find_executable("git"),
+         {sha, 0} <- System.cmd(git, ["rev-parse", "--short", "HEAD"], cd: path) do
+      String.trim(sha)
+    else
+      _ -> to_string(Application.spec(:portico, :vsn))
+    end
   end
 
   defp copy_client(opts) do
