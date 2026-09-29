@@ -131,7 +131,7 @@ defmodule Mix.Tasks.Portico.Generate do
     if File.exists?(source_path) do
       # Ensure base_url is always present in opts (even if nil)
       opts = Keyword.put_new(opts, :base_url, nil)
-      copy_template(source_path, "lib/#{opts[:name]}/client.ex", opts, format_elixir: true)
+      write_template(source_path, "lib/#{opts[:name]}/client.ex", opts)
     end
   end
 
@@ -176,10 +176,17 @@ defmodule Mix.Tasks.Portico.Generate do
     source_path = Path.join(:code.priv_dir(:portico), "templates/api.ex.eex")
 
     if File.exists?(source_path) do
-      copy_template(source_path, "lib/#{opts[:name]}/api/#{filename}.ex", opts,
-        format_elixir: true
-      )
+      write_template(source_path, "lib/#{opts[:name]}/api/#{filename}.ex", opts)
     end
+  end
+
+  # Formats before handing off to create_file, which compares what it's given
+  # against the file on disk. With copy_template's format_elixir option it
+  # compared unformatted output, so unchanged files always prompted, and
+  # format_elixir doesn't exist before Elixir 1.18.
+  defp write_template(source, target, opts) do
+    contents = source |> EEx.eval_file(assigns: opts) |> Code.format_string!()
+    create_file(target, [contents, ?\n])
   end
 
   defp parse_tag_filters(opts) do
