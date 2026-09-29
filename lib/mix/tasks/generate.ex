@@ -9,6 +9,11 @@ defmodule Mix.Tasks.Portico.Generate do
     * `--module` - The name of the API client module (required when not using --config)
     * `--spec` - The URL or file path to the OpenAPI specification (required when not using --config)
     * `--tag` - Generate APIs only for operations with this specific tag
+    * `--force` - Overwrite changed files without asking
+    * `--quiet` - Don't print each file as it's written
+
+  Files that come out identical are left alone without asking, so `--force`
+  only matters for files whose contents changed.
 
   ## Examples
 
@@ -20,6 +25,9 @@ defmodule Mix.Tasks.Portico.Generate do
 
       # Generate APIs only for operations tagged with "users"
       mix portico.generate --module MyAPI --spec spec.json --tag users
+
+      # Regenerate from a config, overwriting changed files without prompts
+      mix portico.generate --config portico.config.json --force --quiet
 
   ## Config File Format
 
@@ -49,7 +57,14 @@ defmodule Mix.Tasks.Portico.Generate do
 
     {opts, _, _} =
       OptionParser.parse(args,
-        switches: [module: :string, spec: :string, tag: :string, config: :string]
+        switches: [
+          module: :string,
+          spec: :string,
+          tag: :string,
+          config: :string,
+          force: :boolean,
+          quiet: :boolean
+        ]
       )
 
     # Process options based on whether config is provided
@@ -106,7 +121,7 @@ defmodule Mix.Tasks.Portico.Generate do
       |> Keyword.put(:portico_ref, portico_ref())
       |> Keyword.put(:generated_on, Date.to_iso8601(Date.utc_today()))
 
-    create_directory("lib/#{opts[:name]}")
+    create_directory("lib/#{opts[:name]}", generator_opts(opts))
     copy_client(client_opts)
     generate_api_modules(spec, opts, tag_filters)
   end
@@ -131,6 +146,7 @@ defmodule Mix.Tasks.Portico.Generate do
     if File.exists?(source_path) do
       # Ensure base_url is always present in opts (even if nil)
       opts = Keyword.put_new(opts, :base_url, nil)
+
       write_template(source_path, "lib/#{opts[:name]}/client.ex", opts)
     end
   end
@@ -147,35 +163,35 @@ defmodule Mix.Tasks.Portico.Generate do
         grouped_operations
       end
 
-    for {tag, path_operations} <- filtered_operations do
-      generate_api_module_for_tag(tag, path_operations, opts)
-    end
+    filtered_operations
+    |> Enum.group_by(fn {tag, _} -> module_file(tag) end)
+    |> Enum.sort()
+    |> Enum.each(fn {{filename, module_name}, tag_groups} ->
+      generate_api_module(filename, module_name, tag_groups, opts)
+    end)
   end
 
-  defp generate_api_module_for_tag(tag, path_operations, opts) do
-    # Determine if this is a tag-based module or path-based fallback
-    {filename, module_name} =
-      if String.starts_with?(tag, "/") do
-        # This is a path fallback (no tags were present)
-        name =
-          case Portico.Helpers.friendly_name(tag) do
-            "" -> "root"
-            name -> name
-          end
+  # Tags that only differ by case or punctuation map to the same file, so
+  # their operations go into one module instead of overwriting each other
+  defp generate_api_module(filename, module_name, tag_groups, opts) do
+    tags = tag_groups |> Enum.map(&elem(&1, 0)) |> Enum.sort()
 
-        module_name = Portico.Helpers.module_name(tag)
-        {name, module_name}
-      else
-        # This is a proper tag
-        filename = Portico.Helpers.tag_to_filename(tag)
-        module_name = Portico.Helpers.tag_to_module_name(tag)
-        {filename, module_name}
-      end
+    if length(tags) > 1 do
+      Mix.shell().info(
+        "Merging tags #{Enum.map_join(tags, ", ", &inspect/1)} into #{module_name}"
+      )
+    end
+
+    path_operations =
+      tag_groups
+      |> Enum.sort()
+      |> Enum.flat_map(&elem(&1, 1))
+      |> Enum.uniq_by(fn {path, operation} -> {path.path, operation.method} end)
 
     opts =
       opts
       |> Keyword.put(:local_module, module_name)
-      |> Keyword.put(:tag, tag)
+      |> Keyword.put(:tag, Enum.join(tags, ", "))
       |> Keyword.put(:path_operations, path_operations)
 
     source_path = Path.join(:code.priv_dir(:portico), "templates/api.ex.eex")
@@ -185,13 +201,30 @@ defmodule Mix.Tasks.Portico.Generate do
     end
   end
 
+  # {filename, module name} for a tag, or for a path when operations have no tags
+  defp module_file("/" <> _ = path) do
+    filename =
+      case Portico.Helpers.friendly_name(path) do
+        "" -> "root"
+        name -> name
+      end
+
+    {filename, Portico.Helpers.module_name(path)}
+  end
+
+  defp module_file(tag) do
+    {Portico.Helpers.tag_to_filename(tag), Portico.Helpers.tag_to_module_name(tag)}
+  end
+
+  defp generator_opts(opts), do: [force: opts[:force] == true, quiet: opts[:quiet] == true]
+
   # Formats before handing off to create_file, which compares what it's given
   # against the file on disk. With copy_template's format_elixir option it
   # compared unformatted output, so unchanged files always prompted, and
   # format_elixir doesn't exist before Elixir 1.18.
   defp write_template(source, target, opts) do
     contents = source |> EEx.eval_file(assigns: opts) |> Code.format_string!()
-    create_file(target, [contents, ?\n])
+    create_file(target, [contents, ?\n], generator_opts(opts))
   end
 
   defp parse_tag_filters(opts) do
