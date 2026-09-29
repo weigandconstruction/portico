@@ -157,7 +157,12 @@ defmodule Mix.Tasks.Portico.Generate do
     {filename, module_name} =
       if String.starts_with?(tag, "/") do
         # This is a path fallback (no tags were present)
-        name = Portico.Helpers.friendly_name(tag)
+        name =
+          case Portico.Helpers.friendly_name(tag) do
+            "" -> "root"
+            name -> name
+          end
+
         module_name = Portico.Helpers.module_name(tag)
         {name, module_name}
       else

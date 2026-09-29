@@ -25,6 +25,7 @@ defmodule Portico.Helpers do
     |> String.replace(~r/\//, "_")
     |> String.replace(~r/[-:]/, "_")
     |> String.replace("$", "")
+    |> String.replace(~r/[^\p{L}\p{N}_]+/u, "_")
     |> String.trim_leading("_")
     |> String.trim_trailing("_")
   end
@@ -32,19 +33,28 @@ defmodule Portico.Helpers do
   @doc """
   Converts a path string into a module name by transforming it into CamelCase.
   This is useful for generating module names from paths, ensuring that the
-  resulting name is valid in Elixir.
+  resulting name is valid in Elixir. The root path becomes `Root`, and a
+  leading digit gets an `N` prefix.
 
   ## Example:
 
       iex> Portico.Helpers.module_name("/rest/v1.0/bim_files/{id}")
       "RestV10BimFilesId"
 
+      iex> Portico.Helpers.module_name("/")
+      "Root"
+
+      iex> Portico.Helpers.module_name("/2fa/setup")
+      "N2faSetup"
+
   """
   @spec module_name(String.t()) :: String.t()
   def module_name(path) do
-    path
-    |> friendly_name()
-    |> Macro.camelize()
+    case path |> friendly_name() |> Macro.camelize() do
+      "" -> "Root"
+      <<digit, _::binary>> = name when digit in ?0..?9 -> "N" <> name
+      name -> name
+    end
   end
 
   @doc """
@@ -513,6 +523,37 @@ defmodule Portico.Helpers do
   def function_name_for_operation(%Path{} = path, %Operation{} = operation) do
     path_part = friendly_name(path.path)
     "#{operation.method}_#{path_part}"
+  end
+
+  @doc """
+  Function names for every operation in one generated module, keyed by
+  `{path, method}`.
+
+  Different paths can map to the same name (`/time-off` and `/time_off` both
+  become `time_off`). When they do, the path with the fewest hyphens keeps the
+  plain name and the rest get `_2`, `_3`, and so on, in path order.
+
+  ## Examples:
+
+      iex> get = %Portico.Spec.Operation{method: "get"}
+      iex> paths = [%Portico.Spec.Path{path: "/time-off"}, %Portico.Spec.Path{path: "/time_off"}]
+      iex> Portico.Helpers.function_names(Enum.map(paths, &{&1, get}))
+      %{{"/time-off", "get"} => "get_time_off_2", {"/time_off", "get"} => "get_time_off"}
+
+  """
+  @spec function_names([{Path.t(), Operation.t()}]) :: %{{String.t(), String.t()} => String.t()}
+  def function_names(path_operations) when is_list(path_operations) do
+    path_operations
+    |> Enum.group_by(fn {path, operation} -> function_name_for_operation(path, operation) end)
+    |> Enum.flat_map(fn {name, colliding} ->
+      colliding
+      |> Enum.sort_by(fn {path, _} -> {length(String.split(path.path, "-")), path.path} end)
+      |> Enum.with_index(1)
+      |> Enum.map(fn {{path, operation}, index} ->
+        {{path.path, operation.method}, if(index == 1, do: name, else: "#{name}_#{index}")}
+      end)
+    end)
+    |> Map.new()
   end
 
   @doc """
