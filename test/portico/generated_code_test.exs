@@ -43,6 +43,9 @@ defmodule Portico.GeneratedCodeTest do
 
     {result, output} =
       with_io(:stderr, fn ->
+        # compile_to_path only creates the directory itself on Elixir 1.19+
+        File.mkdir_p!(Path.join(dir, "ebin"))
+
         Kernel.ParallelCompiler.compile_to_path(files, Path.join(dir, "ebin"),
           return_diagnostics: true
         )
