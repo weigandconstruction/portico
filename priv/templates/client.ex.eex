@@ -16,13 +16,18 @@ defmodule <%= @module %>.Client do
     @moduledoc """
     Represents an HTTP error response (4xx/5xx status codes).
     """
-    defexception [:status, :body, :message]
+    defexception [:status, :body, :message, headers: %{}]
 
     @type t :: %__MODULE__{
             status: non_neg_integer(),
             body: any(),
+            headers: %{optional(binary()) => [binary()]},
             message: String.t()
           }
+
+    def exception(%Req.Response{status: status, body: body, headers: headers}) do
+      %{exception({status, body}) | headers: headers}
+    end
 
     def exception({status, body}) do
       %__MODULE__{
@@ -86,6 +91,15 @@ defmodule <%= @module %>.Client do
         retry: :transient
       )
 
+  ## Response headers
+
+  Generated functions return `{:ok, body}`. To get the whole `Req.Response`
+  instead, for example to read pagination headers, create the client with
+  `return: :response`:
+
+      client = <%= @module %>.Client.new(return: :response)
+      {:ok, %Req.Response{headers: headers, body: body}} = <%= @module %>.Client.request(client, url: "/endpoint")
+
   ## Application Configuration
 
   You can set default options in your application config:
@@ -111,7 +125,7 @@ defmodule <%= @module %>.Client do
     Application.get_env(app, :<%= Portico.Helpers.module_to_config_key(@module) %>, [])
     |> Keyword.merge(options)
     |> Keyword.put_new(:base_url, @default_base_url)
-    |> Req.new()
+    |> build()
   end<% else %>  @doc """
   Creates a new client with the given options.
 
@@ -139,6 +153,15 @@ defmodule <%= @module %>.Client do
         timeout: 30_000,
         auth: {:bearer, "token"}
       )
+
+  ## Response headers
+
+  Generated functions return `{:ok, body}`. To get the whole `Req.Response`
+  instead, for example to read pagination headers, create the client with
+  `return: :response`:
+
+      client = <%= @module %>.Client.new(return: :response)
+      {:ok, %Req.Response{headers: headers, body: body}} = <%= @module %>.Client.request(client, url: "/endpoint")
 
   ## Application Configuration
 
@@ -172,13 +195,28 @@ defmodule <%= @module %>.Client do
       raise ArgumentError, "base_url is required"
     end
 
-    Req.new(options)
+    build(options)
   end<% end %>
+
+  # :return isn't a Req option, so it's kept in the request's private data
+  defp build(options) do
+    {return, options} = Keyword.pop(options, :return, :body)
+
+    unless return in [:body, :response] do
+      raise ArgumentError, "return must be :body or :response, got: #{inspect(return)}"
+    end
+
+    options
+    |> Req.new()
+    |> Req.Request.put_private(:portico_return, return)
+  end
 
   @doc """
   Makes an HTTP request using the provided client.
 
-  Returns `{:ok, body}` on success (2xx status codes) or `{:error, exception}` on failure.
+  Returns `{:ok, body}` on success (2xx status codes), or `{:ok, %Req.Response{}}`
+  for a client created with `return: :response`. Returns `{:error, exception}`
+  on failure; an `HTTPError` includes the response headers.
 
   ## Examples
 
@@ -199,11 +237,14 @@ defmodule <%= @module %>.Client do
     |> clean_options(options)
     |> Req.request()
     |> case do
-      {:ok, %{status: status, body: body}} when status in 200..299 ->
-        {:ok, body}
+      {:ok, %{status: status} = response} when status in 200..299 ->
+        case Req.Request.get_private(client, :portico_return, :body) do
+          :response -> {:ok, response}
+          :body -> {:ok, response.body}
+        end
 
-      {:ok, %{status: status, body: body}} ->
-        {:error, HTTPError.exception({status, body})}
+      {:ok, response} ->
+        {:error, HTTPError.exception(response)}
 
       {:error, %Req.TransportError{} = error} ->
         {:error, TransportError.exception(error)}

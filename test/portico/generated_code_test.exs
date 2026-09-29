@@ -19,19 +19,42 @@ defmodule Portico.GeneratedCodeTest do
   end
 
   # Generates a client for `paths` into `dir`, compiles it, and returns the root module
-  defp generate!(dir, paths, info \\ %{"title" => "Test", "version" => "1.0.0"}) do
+  # Options: :info for the spec's info map, :base_url to generate through a
+  # config with a default base URL
+  defp generate!(dir, paths, opts \\ []) do
     root = "Gen#{System.unique_integer([:positive])}"
+    File.mkdir_p!(dir)
     spec_file = Path.join(dir, "spec.json")
+    info = Keyword.get(opts, :info, %{"title" => "Test", "version" => "1.0.0"})
 
     File.write!(
       spec_file,
       Jason.encode!(%{"openapi" => "3.0.0", "info" => info, "paths" => paths})
     )
 
+    args =
+      if base_url = opts[:base_url] do
+        config_file = Path.join(dir, "config.json")
+
+        tags =
+          paths |> Map.values() |> Enum.flat_map(&Map.values/1) |> Enum.flat_map(& &1["tags"])
+
+        File.write!(
+          config_file,
+          Jason.encode!(%{
+            "spec_info" => %{"source" => spec_file, "module" => root},
+            "base_url" => base_url,
+            "tags" => Enum.uniq(tags)
+          })
+        )
+
+        ["--config", config_file]
+      else
+        ["--module", root, "--spec", spec_file]
+      end
+
     File.cd!(dir, fn ->
-      capture_io(fn ->
-        Mix.Tasks.Portico.Generate.run(["--module", root, "--spec", spec_file])
-      end)
+      capture_io(fn -> Mix.Tasks.Portico.Generate.run(args) end)
     end)
 
     files = Path.wildcard(Path.join(dir, "lib/**/*.ex"))
@@ -164,7 +187,7 @@ defmodule Portico.GeneratedCodeTest do
     end
 
     test "a spec without an info version", %{dir: dir} do
-      generate!(dir, %{"/things" => %{"get" => op()}}, %{"title" => "Test"})
+      generate!(dir, %{"/things" => %{"get" => op()}}, info: %{"title" => "Test"})
     end
   end
 
@@ -313,6 +336,61 @@ defmodule Portico.GeneratedCodeTest do
 
       {:ok, sent} = call(root, Things, :get_things_id_raw, ["1"])
       assert sent.url == ~S(https://api.test/things/1/"raw")
+    end
+  end
+
+  describe "returns" do
+    setup %{dir: dir} do
+      %{root: generate!(dir, %{"/things" => %{"get" => op()}})}
+    end
+
+    defp respond(root, status, client_opts) do
+      adapter = fn request ->
+        response = Req.Response.new(status: status, body: %{"ok" => true})
+        {request, Req.Response.put_header(response, "x-total", "42")}
+      end
+
+      opts = [base_url: "https://api.test", adapter: adapter, retry: false] ++ client_opts
+      Module.concat(root, Things).get_things(Module.concat(root, Client).new(opts))
+    end
+
+    test "the body by default", %{root: root} do
+      assert respond(root, 200, []) == {:ok, %{"ok" => true}}
+    end
+
+    test "the whole response with return: :response", %{root: root} do
+      assert {:ok, %Req.Response{status: 200, body: %{"ok" => true}} = response} =
+               respond(root, 200, return: :response)
+
+      assert Req.Response.get_header(response, "x-total") == ["42"]
+    end
+
+    test "headers on an HTTPError either way", %{root: root} do
+      for opts <- [[], [return: :response]] do
+        assert {:error, %{status: 429, body: %{"ok" => true}, headers: headers}} =
+                 respond(root, 429, opts)
+
+        assert headers["x-total"] == ["42"]
+      end
+    end
+
+    test "the whole response from a client with a default base URL", %{dir: dir} do
+      root =
+        generate!(Path.join(dir, "default"), %{"/things" => %{"get" => op()}},
+          base_url: "https://api.test"
+        )
+
+      adapter = fn request -> {request, Req.Response.new(status: 200, body: "ok")} end
+      client = Module.concat(root, Client).new(adapter: adapter, return: :response)
+
+      assert {:ok, %Req.Response{body: "ok"}} = Module.concat(root, Things).get_things(client)
+      assert client.options.base_url == "https://api.test"
+    end
+
+    test "an error for an unknown return option", %{root: root} do
+      assert_raise ArgumentError, ~r/return must be :body or :response/, fn ->
+        Module.concat(root, Client).new(base_url: "https://api.test", return: :headers)
+      end
     end
   end
 

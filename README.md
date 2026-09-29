@@ -156,6 +156,14 @@ case MyAPI.Users.get_user(client, "user123") do
   {:error, exception} -> IO.puts("Error: #{exception.message}")
 end
 
+# Need response headers, e.g. for pagination? Get the whole Req.Response instead
+client = MyAPI.Client.new(auth: {:bearer, "token"}, return: :response)
+{:ok, %Req.Response{headers: headers, body: users}} = MyAPI.Users.list_users(client)
+
+# HTTP errors always include the response headers
+{:error, %MyAPI.Client.HTTPError{status: 429, headers: %{"retry-after" => [seconds]}}} =
+  MyAPI.Users.list_users(client)
+
 # All Req options are supported
 client = MyAPI.Client.new(
   auth: {:bearer, "token"},
