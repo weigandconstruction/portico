@@ -36,9 +36,16 @@ defmodule Portico.GeneratedCodeTest do
 
     files = Path.wildcard(Path.join(dir, "lib/**/*.ex"))
 
+    # The test environment compiles without docs, but we assert on them
+    docs = Code.get_compiler_option(:docs)
+    Code.put_compiler_option(:docs, true)
+    on_exit(fn -> Code.put_compiler_option(:docs, docs) end)
+
     {result, output} =
       with_io(:stderr, fn ->
-        Kernel.ParallelCompiler.compile(files, return_diagnostics: true)
+        Kernel.ParallelCompiler.compile_to_path(files, Path.join(dir, "ebin"),
+          return_diagnostics: true
+        )
       end)
 
     case result do
@@ -57,6 +64,17 @@ defmodule Portico.GeneratedCodeTest do
             Enum.map_join(errors, "\n", & &1.message) <> "\n" <> output
         )
     end
+  end
+
+  # The compiled @doc text of a generated function
+  defp doc!(dir, module, function) do
+    beam = Path.join([dir, "ebin", "#{module}.beam"])
+    {:docs_v1, _, _, _, _, _, docs} = Code.fetch_docs(beam)
+
+    Enum.find_value(docs, fn
+      {{:function, ^function, _}, _, _, %{"en" => doc}, _} -> doc
+      _ -> nil
+    end)
   end
 
   # A client whose adapter echoes back what would have been sent
@@ -131,6 +149,34 @@ defmodule Portico.GeneratedCodeTest do
 
     test "a spec without an info version", %{dir: dir} do
       generate!(dir, %{"/things" => %{"get" => op()}}, %{"title" => "Test"})
+    end
+  end
+
+  describe "spec text" do
+    test "is not evaluated or allowed to end a doc early", %{dir: dir} do
+      description =
+        Enum.join([~S|Ids look like #{prefix}-\d+ (see "docs").|, ~s("""), "Not code"], "\n")
+
+      params = [param("q", "query", %{"description" => ~S(Matches #{name} or """)})]
+
+      root =
+        generate!(dir, %{
+          "/things" => %{"get" => op(%{"description" => description, "parameters" => params})}
+        })
+
+      doc = doc!(dir, Module.concat(root, Things), :get_things)
+      assert doc =~ description
+      assert doc =~ ~S(Matches #{name} or """)
+    end
+
+    test "with quotes in a path is sent as-is", %{dir: dir} do
+      params = [param("id", "path", %{"required" => true})]
+
+      root =
+        generate!(dir, %{~S(/things/{id}/"raw") => %{"get" => op(%{"parameters" => params})}})
+
+      {:ok, sent} = call(root, Things, :get_things_id_raw, ["1"])
+      assert sent.url == ~S(https://api.test/things/1/"raw")
     end
   end
 

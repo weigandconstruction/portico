@@ -139,7 +139,6 @@ defmodule Mix.Tasks.Portico.GenerateTest do
         end)
 
         client = File.read!("lib/test_api/client.ex")
-        assert client =~ "@moduledoc ~S\"\"\""
         assert client =~ "  * Spec: #{spec_file}\n"
         assert client =~ "  * Spec version: 1.0.0\n"
         assert client =~ "  * Portico: #{Application.spec(:portico, :vsn)}\n"

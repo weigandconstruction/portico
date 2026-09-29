@@ -7,7 +7,7 @@ defmodule <%= @module %>.<%= @local_module %> do
 
   <%= for {path, operation} <- @path_operations do %>
     @doc """
-    <%= operation.description %>
+    <%= Portico.Helpers.escape_doc(operation.description) %>
 
     ## Parameters
 
@@ -20,7 +20,7 @@ defmodule <%= @module %>.<%= @local_module %> do
     ""
   end
   if nested != "", do: main_param <> "\n" <> nested, else: main_param
-end) |> Enum.join("\n") %>
+end) |> Enum.join("\n") |> Portico.Helpers.escape_doc() %>
 <% end %>
     """
     <%= Portico.Helpers.function_typespec(Portico.Helpers.function_name_for_operation(path, operation), path, operation) %>
@@ -33,9 +33,9 @@ end) |> Enum.join("\n") %>
           headers: [
           <%= for param <-  Portico.Helpers.header_parameters(path, operation) do %>
             <%= if param.required do %>
-            {"<%= param.name %>", <%= param.internal_name %>},
+            {<%= inspect(param.name) %>, <%= param.internal_name %>},
             <% else %>
-            {"<%= param.name %>", Keyword.get(opts, :<%= param.internal_name %>)},
+            {<%= inspect(param.name) %>, Keyword.get(opts, :<%= param.internal_name %>)},
             <% end %>
           <% end %>
           ],
@@ -45,9 +45,9 @@ end) |> Enum.join("\n") %>
           params: [
           <%= for param <-  Portico.Helpers.query_parameters(path, operation) do %>
             <%= if param.required do %>
-            {"<%= param.name %>", <%= param.internal_name %>},
+            {<%= inspect(param.name) %>, <%= param.internal_name %>},
             <% else %>
-            {"<%= param.name %>", Keyword.get(opts, :<%= param.internal_name %>)},
+            {<%= inspect(param.name) %>, Keyword.get(opts, :<%= param.internal_name %>)},
             <% end %>
           <% end %>
           ],

@@ -733,4 +733,18 @@ defmodule Portico.HelpersTest do
                "@spec get_test(Req.Request.t(), any(), any()) :: {:ok, any()} | {:error, Exception.t()}"
     end
   end
+
+  describe "escape_doc/1" do
+    test "escapes interpolation, backslashes, and heredoc terminators" do
+      text = Enum.join([~S(Use #{id} or \d+), ~s(""")], "\n")
+      escaped = Helpers.escape_doc(text)
+
+      assert escaped == Enum.join([~S(Use \#{id} or \\d+), ~S(\""")], "\n")
+      assert Code.eval_string(~s("""\n#{escaped}\n""")) |> elem(0) == text <> "\n"
+    end
+
+    test "returns an empty string for nil" do
+      assert Helpers.escape_doc(nil) == ""
+    end
+  end
 end
