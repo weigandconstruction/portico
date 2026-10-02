@@ -264,6 +264,101 @@ defmodule Mix.Tasks.Portico.GenerateTest do
     end
   end
 
+  describe "--force and --quiet" do
+    setup do
+      Mix.shell(Mix.Shell.Process)
+      on_exit(fn -> Mix.shell(Mix.Shell.IO) end)
+    end
+
+    test "regenerating an unchanged spec doesn't prompt", %{
+      temp_dir: temp_dir,
+      spec_file: spec_file
+    } do
+      File.cd!(temp_dir, fn ->
+        args = ["--module", "TestAPI", "--spec", spec_file]
+        Mix.Tasks.Portico.Generate.run(args)
+        Mix.Tasks.Portico.Generate.run(args)
+
+        refute_received {:mix_shell, :yes?, _}
+      end)
+    end
+
+    test "--force overwrites a changed file without asking", %{
+      temp_dir: temp_dir,
+      spec_file: spec_file
+    } do
+      File.cd!(temp_dir, fn ->
+        args = ["--module", "TestAPI", "--spec", spec_file]
+        Mix.Tasks.Portico.Generate.run(args)
+        original = File.read!("lib/test_api/client.ex")
+        File.write!("lib/test_api/client.ex", "edited")
+
+        Mix.Tasks.Portico.Generate.run(args ++ ["--force"])
+
+        assert File.read!("lib/test_api/client.ex") == original
+        refute_received {:mix_shell, :yes?, _}
+      end)
+    end
+
+    test "--force leaves an unchanged file untouched", %{
+      temp_dir: temp_dir,
+      spec_file: spec_file
+    } do
+      File.cd!(temp_dir, fn ->
+        args = ["--module", "TestAPI", "--spec", spec_file]
+        Mix.Tasks.Portico.Generate.run(args)
+        old_mtime = {{2000, 1, 1}, {0, 0, 0}}
+        File.touch!("lib/test_api/client.ex", old_mtime)
+
+        Mix.Tasks.Portico.Generate.run(args ++ ["--force"])
+
+        assert File.stat!("lib/test_api/client.ex").mtime == old_mtime
+        refute_received {:mix_shell, :yes?, _}
+      end)
+    end
+
+    test "without --force a changed file prompts", %{temp_dir: temp_dir, spec_file: spec_file} do
+      File.cd!(temp_dir, fn ->
+        args = ["--module", "TestAPI", "--spec", spec_file]
+        Mix.Tasks.Portico.Generate.run(args)
+        File.write!("lib/test_api/client.ex", "edited")
+
+        send(self(), {:mix_shell_input, :yes?, false})
+        Mix.Tasks.Portico.Generate.run(args)
+
+        assert_received {:mix_shell, :yes?, [prompt]}
+        assert prompt =~ "client.ex already exists, overwrite?"
+        assert File.read!("lib/test_api/client.ex") == "edited"
+      end)
+    end
+
+    test "--quiet doesn't print each file", %{temp_dir: temp_dir, spec_file: spec_file} do
+      File.cd!(temp_dir, fn ->
+        Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file, "--quiet"])
+
+        assert File.exists?("lib/test_api/client.ex")
+        refute_received {:mix_shell, :info, ["* creating" <> _]}
+      end)
+    end
+
+    test "are allowed with --config", %{temp_dir: temp_dir, spec_file: spec_file} do
+      config_file = Path.join(temp_dir, "config.json")
+
+      File.write!(
+        config_file,
+        Jason.encode!(%{
+          "spec_info" => %{"source" => spec_file, "module" => "TestAPI"},
+          "tags" => ["user-management"]
+        })
+      )
+
+      File.cd!(temp_dir, fn ->
+        Mix.Tasks.Portico.Generate.run(["--config", config_file, "--force", "--quiet"])
+        assert File.exists?("lib/test_api/api/user_management.ex")
+      end)
+    end
+  end
+
   describe "tag-based grouping behavior" do
     test "groups operations with same tag into single module", %{temp_dir: temp_dir} do
       spec_with_same_tags = %{

@@ -288,6 +288,23 @@ defmodule Portico.GeneratedCodeTest do
                call(root, Things, :get_time_off_3, ["1"])
     end
 
+    test "in tags that map to the same file puts both in one module", %{dir: dir} do
+      root =
+        generate!(dir, %{
+          "/a" => %{"get" => op(%{"tags" => ["user-management"]})},
+          "/b" => %{"get" => op(%{"tags" => ["User Management"]})},
+          "/c" => %{"get" => op(%{"tags" => ["user-management", "User Management"]})},
+          "/users" => %{"get" => %{"responses" => %{"200" => %{"description" => "OK"}}}},
+          "/d" => %{"get" => op(%{"tags" => ["users"]})}
+        })
+
+      functions = Module.concat(root, UserManagement).__info__(:functions)
+      assert Enum.sort(Keyword.keys(functions)) == [:get_a, :get_b, :get_c]
+
+      functions = Module.concat(root, Users).__info__(:functions)
+      assert Enum.sort(Keyword.keys(functions)) == [:get_d, :get_users]
+    end
+
     test "with quotes in a path is sent as-is", %{dir: dir} do
       params = [param("id", "path", %{"required" => true})]
 
