@@ -222,7 +222,7 @@ defmodule <%= @module %>.Client do
           {:headers, Enum.reject(headers, fn {_k, v} -> is_nil(v) end)}
 
         {:params, params} when is_list(params) ->
-          {:params, Enum.reject(params, fn {_k, v} -> is_nil(v) end)}
+          {:params, Enum.flat_map(params, &expand_param/1)}
 
         {:form_multipart, fields} ->
           {:form_multipart, Enum.map(fields, &multipart_field/1)}
@@ -243,4 +243,25 @@ defmodule <%= @module %>.Client do
 
   defp multipart_value(value) when is_boolean(value) or is_float(value), do: to_string(value)
   defp multipart_value(value), do: value
+
+  # Drops nil params and sends a list as a repeated key (ids=1&ids=2)
+  defp expand_param({_key, nil}), do: []
+  defp expand_param({key, values}) when is_list(values), do: Enum.map(values, &{key, &1})
+  defp expand_param(param), do: [param]
+
+  @doc """
+  Escapes a value for use as one URL path segment, so characters like `/`,
+  `?`, and `#` in it can't change which URL is requested.
+  """
+  @spec encode_path(term()) :: String.t()
+  def encode_path(value), do: value |> to_string() |> URI.encode(&URI.char_unreserved?/1)
+
+  @doc """
+  Joins a list query parameter with commas (`ids=1,2`), for parameters the
+  spec marks `explode: false`.
+  """
+  @spec comma_separated(list() | nil) :: String.t() | nil
+  def comma_separated(nil), do: nil
+  def comma_separated(values) when is_list(values), do: Enum.join(values, ",")
+  def comma_separated(value), do: value
 end

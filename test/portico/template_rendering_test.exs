@@ -188,7 +188,9 @@ defmodule Portico.TemplateRenderingTest do
       generate_and_test(spec, temp_dir, "TestAPI")
 
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/projects.ex"))
-      assert content =~ "url: \"/companies/\#{company_id}/projects/\#{project_id}\""
+
+      assert content =~
+               "url: \"/companies/\#{encode_path(company_id)}/projects/\#{encode_path(project_id)}\""
     end
 
     test "converts camelCase parameter names to snake_case in URLs", %{temp_dir: temp_dir} do
@@ -219,7 +221,8 @@ defmodule Portico.TemplateRenderingTest do
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/asset_services.ex"))
 
       # Should use snake_case parameter names in URL interpolation
-      assert content =~ "url: \"/assets/\#{asset_id}/history-services/\#{history_service_id}\""
+      assert content =~
+               "url: \"/assets/\#{encode_path(asset_id)}/history-services/\#{encode_path(history_service_id)}\""
 
       # Should NOT contain the original camelCase names
       refute content =~ ~r/\#{assetId}/
@@ -264,8 +267,9 @@ defmodule Portico.TemplateRenderingTest do
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/projects.ex"))
 
       # All parameter names should be converted to snake_case
+      # The formatter moves a long URL onto its own line, so skip the "url:" key
       assert content =~
-               "url: \"/companies/\#{company_id}/projects/\#{project_item_id}/sub-items/\#{sub_item_uuid}\""
+               "\"/companies/\#{encode_path(company_id)}/projects/\#{encode_path(project_item_id)}/sub-items/\#{encode_path(sub_item_uuid)}\""
 
       # Original camelCase should not appear
       refute content =~ ~r/\#{companyId}/
@@ -303,7 +307,7 @@ defmodule Portico.TemplateRenderingTest do
       content = File.read!(Elixir.Path.join(temp_dir, "lib/test_api/api/posts.ex"))
 
       # Should work correctly with already snake_case parameters
-      assert content =~ "url: \"/users/\#{user_id}/posts/\#{post_id}\""
+      assert content =~ "url: \"/users/\#{encode_path(user_id)}/posts/\#{encode_path(post_id)}\""
       assert content =~ "def get_users_user_id_posts_post_id(client, user_id, post_id)"
     end
 

@@ -193,10 +193,54 @@ defmodule Portico.Helpers do
   @spec interpolated_path_with_params(String.t(), [Parameter.t()]) :: String.t()
   def interpolated_path_with_params(path, parameters)
       when is_binary(path) and is_list(parameters) do
+    interpolate_path(path, parameters, & &1)
+  end
+
+  @doc """
+  The URL path for a generated request. Like `interpolated_path_with_params/2`,
+  but each value goes through the generated client's `encode_path/1` so it
+  stays one path segment.
+
+  ## Example:
+
+      iex> params = [%Portico.Spec.Parameter{name: "userId", internal_name: "user_id", in: "path"}]
+      iex> Portico.Helpers.request_path("/users/{userId}", params)
+      "/users/\\\#{encode_path(user_id)}"
+
+  """
+  @spec request_path(String.t(), [Parameter.t()]) :: String.t()
+  def request_path(path, parameters) when is_binary(path) and is_list(parameters) do
+    interpolate_path(path, parameters, &"encode_path(#{&1})")
+  end
+
+  @doc """
+  Whether any generated request in a module interpolates a path parameter,
+  meaning the module needs `encode_path/1`.
+  """
+  @spec uses_path_parameters?([{Path.t(), Operation.t()}]) :: boolean()
+  def uses_path_parameters?(path_operations) do
+    Enum.any?(path_operations, fn {path, operation} ->
+      path
+      |> function_parameters(operation)
+      |> Enum.any?(&(&1.in == "path" and String.contains?(path.path, "{#{&1.name}}")))
+    end)
+  end
+
+  @doc """
+  Whether a query parameter's list value is sent comma-separated
+  (`ids=1,2`) instead of repeated (`ids=1&ids=2`).
+  """
+  @spec comma_separated?(Parameter.t()) :: boolean()
+  def comma_separated?(%Parameter{} = param) do
+    match?(%{"type" => "array"}, param.schema) and param.style in [nil, "form"] and
+      not param.explode
+  end
+
+  defp interpolate_path(path, parameters, wrap) do
     path_params = Enum.filter(parameters, &(&1.in == "path"))
 
     Enum.reduce(path_params, escape_string(path), fn param, acc ->
-      String.replace(acc, "{#{param.name}}", "\#{#{param.internal_name}}")
+      String.replace(acc, "{#{param.name}}", "\#{#{wrap.(param.internal_name)}}")
     end)
   end
 
