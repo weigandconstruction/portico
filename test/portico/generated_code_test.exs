@@ -336,6 +336,20 @@ defmodule Portico.GeneratedCodeTest do
       assert sent.body =~ ~s(name="name")
     end
 
+    test "boolean and float multipart fields as strings", %{dir: dir} do
+      root = generate!(dir, body_paths(["multipart/form-data"]))
+
+      {:ok, sent} =
+        call(root, Things, :post_things, [
+          %{active: true, hidden: false, ratio: 1.5, label: {0.25, content_type: "text/plain"}}
+        ])
+
+      assert sent.body =~ ~s(name="active"\r\n\r\ntrue\r\n)
+      assert sent.body =~ ~s(name="hidden"\r\n\r\nfalse\r\n)
+      assert sent.body =~ ~s(name="ratio"\r\n\r\n1.5\r\n)
+      assert sent.body =~ ~s(content-type: text/plain\r\n\r\n0.25\r\n)
+    end
+
     test "a raw body with the declared content type", %{dir: dir} do
       root = generate!(dir, body_paths(["application/octet-stream"]))
       {:ok, sent} = call(root, Things, :post_things, [<<1, 2, 3>>])
