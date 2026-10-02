@@ -185,9 +185,35 @@ defmodule Portico.Helpers do
       when is_binary(path) and is_list(parameters) do
     path_params = Enum.filter(parameters, &(&1.in == "path"))
 
-    Enum.reduce(path_params, path, fn param, acc ->
+    Enum.reduce(path_params, escape_string(path), fn param, acc ->
       String.replace(acc, "{#{param.name}}", "\#{#{param.internal_name}}")
     end)
+  end
+
+  @doc """
+  Escapes spec text for use inside a generated `\"""` heredoc, such as a `@doc`,
+  so it isn't interpolated and can't end the heredoc early.
+  """
+  @spec escape_doc(String.t() | nil) :: String.t()
+  def escape_doc(nil), do: ""
+
+  def escape_doc(text) when is_binary(text) do
+    text
+    |> escape_backslashes_and_interpolation()
+    |> String.replace(~s("""), ~s(\\"""))
+  end
+
+  # Escapes spec text for use inside a generated double-quoted string literal
+  defp escape_string(text) do
+    text
+    |> escape_backslashes_and_interpolation()
+    |> String.replace(~s("), ~s(\\"))
+  end
+
+  defp escape_backslashes_and_interpolation(text) do
+    text
+    |> String.replace("\\", "\\\\")
+    |> String.replace("\#{", "\\\#{")
   end
 
   @doc """

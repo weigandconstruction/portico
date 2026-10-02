@@ -1,11 +1,11 @@
 defmodule <%= @module %>.Client do
-  @moduledoc ~S"""
+  @moduledoc """
   HTTP client for <%= @module %> API.
 
   ## Generation details
 
-  * Spec: <%= @spec %>
-<%= if @spec_info["version"] do %>  * Spec version: <%= @spec_info["version"] %>
+  * Spec: <%= Portico.Helpers.escape_doc(@spec) %>
+<%= if @spec_info["version"] do %>  * Spec version: <%= Portico.Helpers.escape_doc(to_string(@spec_info["version"])) %>
 <% end %>  * Portico: <%= @portico_ref %>
   * Generated on: <%= @generated_on %>
   """
@@ -50,7 +50,7 @@ defmodule <%= @module %>.Client do
     end
   end
 
-<%= if @base_url do %>  @default_base_url "<%= @base_url %>"
+<%= if @base_url do %>  @default_base_url <%= inspect(@base_url) %>
 
   @doc """
   Creates a new client with the given options.
