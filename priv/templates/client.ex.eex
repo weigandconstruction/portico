@@ -2,7 +2,7 @@ defmodule <%= @module %>.Client do
   @moduledoc """
   HTTP client for <%= @module %> API.
 
-  Requires Req 0.5.3 or newer.
+  Requires Req 0.6.1 or newer (0.7.0 and 0.7.1 are not supported).
 
   ## Generation details
 
