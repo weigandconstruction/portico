@@ -2,6 +2,8 @@ defmodule <%= @module %>.Client do
   @moduledoc """
   HTTP client for <%= @module %> API.
 
+  Requires Req 0.5.3 or newer.
+
   ## Generation details
 
   * Spec: <%= Portico.Helpers.escape_doc(@spec) %>

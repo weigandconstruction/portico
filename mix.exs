@@ -21,7 +21,7 @@ defmodule Portico.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:req, "~> 0.5"},
+      {:req, "~> 0.5.3"},
       {:jason, "~> 1.4"},
       {:yaml_elixir, "~> 2.11"},
       {:briefly, "~> 0.3", only: :test}
