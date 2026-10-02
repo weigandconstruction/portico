@@ -15,39 +15,23 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
+        # Oldest supported Elixir (mix.exs) through what the devcontainer runs
         include:
-          # Elixir 1.15 with compatible OTP versions (24-26)
-          - elixir: "1.15"
-            otp: "24"
-          - elixir: "1.15"
-            otp: "25"
           - elixir: "1.15"
             otp: "26"
-          
-          # Elixir 1.16 with compatible OTP versions (24-26)
           - elixir: "1.16"
-            otp: "24"
-          - elixir: "1.16"
-            otp: "25"
-          - elixir: "1.16"
-            otp: "26"
-          
-          # Elixir 1.17 with compatible OTP versions (25-27)
-          - elixir: "1.17"
-            otp: "25"
-          - elixir: "1.17"
             otp: "26"
           - elixir: "1.17"
             otp: "27"
-          
-          # Elixir 1.18 with compatible OTP versions (25-27)
-          - elixir: "1.18"
-            otp: "25"
-          - elixir: "1.18"
-            otp: "26"
           - elixir: "1.18"
             otp: "27"
+          - elixir: "1.19"
+            otp: "28"
+          - elixir: "1.20"
+            otp: "29"
+            primary: true
 
     steps:
       - name: Checkout code
@@ -72,27 +56,20 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
+      # Formatter output can differ between Elixir versions
       - name: Check formatting
+        if: matrix.primary
         run: mix format --check-formatted
 
       - name: Compile
-        run: |
-          if [ "${{ matrix.elixir }}" = "1.18" ] && [ "${{ matrix.otp }}" = "27" ]; then
-            mix compile --warnings-as-errors
-          else
-            mix compile
-          fi
+        run: mix compile ${{ matrix.primary && '--warnings-as-errors' || '' }}
 
       - name: Run tests
-        run: mix test
-
-      - name: Generate coverage report
-        run: mix test --cover --export-coverage default
-        continue-on-error: true
+        run: mix test ${{ matrix.primary && '--cover --export-coverage default' || '' }}
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
-        if: matrix.elixir == '1.18' && matrix.otp == '27'
+        if: matrix.primary
         with:
           name: coverage-report
           path: cover/
