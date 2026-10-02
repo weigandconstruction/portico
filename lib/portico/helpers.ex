@@ -25,6 +25,7 @@ defmodule Portico.Helpers do
     |> String.replace(~r/\//, "_")
     |> String.replace(~r/[-:]/, "_")
     |> String.replace("$", "")
+    |> String.replace(~r/[^\p{L}\p{N}_]+/u, "_")
     |> String.trim_leading("_")
     |> String.trim_trailing("_")
   end
@@ -32,19 +33,28 @@ defmodule Portico.Helpers do
   @doc """
   Converts a path string into a module name by transforming it into CamelCase.
   This is useful for generating module names from paths, ensuring that the
-  resulting name is valid in Elixir.
+  resulting name is valid in Elixir. The root path becomes `Root`, and a
+  leading digit gets an `N` prefix.
 
   ## Example:
 
       iex> Portico.Helpers.module_name("/rest/v1.0/bim_files/{id}")
       "RestV10BimFilesId"
 
+      iex> Portico.Helpers.module_name("/")
+      "Root"
+
+      iex> Portico.Helpers.module_name("/2fa/setup")
+      "N2faSetup"
+
   """
   @spec module_name(String.t()) :: String.t()
   def module_name(path) do
-    path
-    |> friendly_name()
-    |> Macro.camelize()
+    case path |> friendly_name() |> Macro.camelize() do
+      "" -> "Root"
+      <<digit, _::binary>> = name when digit in ?0..?9 -> "N" <> name
+      name -> name
+    end
   end
 
   @doc """
@@ -513,6 +523,67 @@ defmodule Portico.Helpers do
   def function_name_for_operation(%Path{} = path, %Operation{} = operation) do
     path_part = friendly_name(path.path)
     "#{operation.method}_#{path_part}"
+  end
+
+  @doc """
+  Function names for every operation in one generated module, keyed by
+  `{path, method}`.
+
+  Different paths can map to the same name (`/time-off` and `/time_off` both
+  become `time_off`). When they do, the path with the fewest hyphens keeps the
+  plain name and the rest get the smallest of `_2`, `_3`, and so on, in path
+  order, that no other operation's name uses (so `/time-off` skips
+  `get_time_off_2` when `/time_off_2` exists).
+
+  ## Examples:
+
+      iex> get = %Portico.Spec.Operation{method: "get"}
+      iex> paths = [%Portico.Spec.Path{path: "/time-off"}, %Portico.Spec.Path{path: "/time_off"}]
+      iex> Portico.Helpers.function_names(Enum.map(paths, &{&1, get}))
+      %{{"/time-off", "get"} => "get_time_off_2", {"/time_off", "get"} => "get_time_off"}
+
+      iex> get = %Portico.Spec.Operation{method: "get"}
+      iex> paths = Enum.map(["/time_off", "/time-off", "/time_off_2"], &%Portico.Spec.Path{path: &1})
+      iex> Portico.Helpers.function_names(Enum.map(paths, &{&1, get}))
+      %{
+        {"/time-off", "get"} => "get_time_off_3",
+        {"/time_off", "get"} => "get_time_off",
+        {"/time_off_2", "get"} => "get_time_off_2"
+      }
+
+  """
+  @spec function_names([{Path.t(), Operation.t()}]) :: %{{String.t(), String.t()} => String.t()}
+  def function_names(path_operations) when is_list(path_operations) do
+    groups =
+      path_operations
+      |> Enum.group_by(fn {path, operation} -> function_name_for_operation(path, operation) end)
+      |> Enum.sort_by(fn {name, _} -> name end)
+
+    # Every plain name is taken up front, so a suffix never lands on one
+    reserved = MapSet.new(groups, fn {name, _} -> name end)
+
+    {names, _taken} = Enum.flat_map_reduce(groups, reserved, &assign_function_names/2)
+    Map.new(names)
+  end
+
+  defp assign_function_names({name, colliding}, taken) do
+    [{path, operation} | rest] =
+      Enum.sort_by(colliding, fn {path, _} ->
+        {length(String.split(path.path, "-")), path.path}
+      end)
+
+    {suffixed, taken} =
+      Enum.map_reduce(rest, taken, fn {path, operation}, taken ->
+        suffixed_name = next_free_name(name, 2, taken)
+        {{{path.path, operation.method}, suffixed_name}, MapSet.put(taken, suffixed_name)}
+      end)
+
+    {[{{path.path, operation.method}, name} | suffixed], taken}
+  end
+
+  defp next_free_name(name, n, taken) do
+    candidate = "#{name}_#{n}"
+    if MapSet.member?(taken, candidate), do: next_free_name(name, n + 1, taken), else: candidate
   end
 
   @doc """

@@ -4,17 +4,44 @@ defmodule Portico.Spec.ParameterTest do
   alias Portico.Spec.Parameter
 
   describe "parse/1" do
+    test "treats path parameters as required even when the spec doesn't" do
+      assert Parameter.parse(%{"name" => "id", "in" => "path"}).required
+      assert Parameter.parse(%{"name" => "id", "in" => "path", "required" => false}).required
+    end
+
+    test "turns names that aren't valid identifiers into ones that are" do
+      for {name, expected} <- [
+            {"page size", "page_size"},
+            {"filter:name", "filter_name"},
+            {"sort+", "sort_"},
+            {"2fa", "n2fa"},
+            {~S(X-"Quoted"), "x__quoted_"},
+            {"größe", "größe"},
+            {"Ärger", "ärger"},
+            {"_private", "_private"},
+            {"+", "param"},
+            {"enabled?", "enabled?"},
+            {"force!", "force!"},
+            {"a?b", "a_b"},
+            {"x??", "x_?"},
+            {"2fa?", "n2fa?"}
+          ] do
+        assert Parameter.parse(%{"name" => name, "in" => "query"}).internal_name == expected,
+               "#{name} should normalize to #{expected}"
+      end
+    end
+
     test "parses a minimal parameter" do
       input = %{
         "name" => "id",
-        "in" => "path"
+        "in" => "query"
       }
 
       param = Parameter.parse(input)
 
       assert param.name == "id"
       assert param.internal_name == "id"
-      assert param.in == "path"
+      assert param.in == "query"
       assert param.description == nil
       assert param.required == false
       assert param.deprecated == false

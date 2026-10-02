@@ -28,7 +28,14 @@ defmodule Portico.Spec.Parameter do
   - `<` → `_lt` (less than)
   - `>` → `_gt` (greater than)
   - `=` → `_eq` (equal)
+  - Anything else that can't appear in a variable name → `_`, except one
+    terminal `?` or `!`, which is kept
+  - Leading `_` left over from the above is trimmed (unless the name started with one)
+  - A leading digit gets an `n` prefix, and an uppercase first letter is lowercased
   - Reserved Elixir keywords get `_` suffix
+
+  Path parameters are always required, as OpenAPI requires, even when a spec
+  leaves out `required: true`.
 
   ## Examples
 
@@ -51,6 +58,14 @@ defmodule Portico.Spec.Parameter do
       iex> param = Portico.Spec.Parameter.parse(%{"name" => "end", "in" => "query"})
       iex> param.internal_name
       "end_"
+
+      iex> param = Portico.Spec.Parameter.parse(%{"name" => "page size", "in" => "query"})
+      iex> param.internal_name
+      "page_size"
+
+      iex> param = Portico.Spec.Parameter.parse(%{"name" => "2fa", "in" => "query"})
+      iex> param.internal_name
+      "n2fa"
   """
 
   @type t() :: %__MODULE__{
@@ -96,7 +111,7 @@ defmodule Portico.Spec.Parameter do
       internal_name: normalize_name(parameter["name"]),
       description: parameter["description"],
       in: parameter["in"],
-      required: parameter["required"] || false,
+      required: parameter["required"] || parameter["in"] == "path",
       deprecated: parameter["deprecated"] || false,
       style: parameter["style"],
       explode: parameter["explode"] || false,
@@ -124,7 +139,29 @@ defmodule Portico.Spec.Parameter do
     |> String.replace("<", "_lt")
     |> String.replace(">", "_gt")
     |> String.replace("=", "_eq")
+    |> to_identifier(name)
     |> escape_parameter_name()
+  end
+
+  # Elixir variables may end in one `?` or `!`, so a terminal one is kept
+  defp to_identifier(name, original) do
+    case Regex.run(~r/\A(.*)([?!])\z/su, name) do
+      [_, base, mark] -> to_base_identifier(base, original) <> mark
+      nil -> to_base_identifier(name, original)
+    end
+  end
+
+  defp to_base_identifier(name, original) do
+    name = String.replace(name, ~r/[^\p{L}\p{N}_]+/u, "_")
+
+    name =
+      if String.starts_with?(original, "_"), do: name, else: String.trim_leading(name, "_")
+
+    case String.split_at(name, 1) do
+      {"", _} -> "param"
+      {first, _} when first in ~w(0 1 2 3 4 5 6 7 8 9) -> "n" <> name
+      {first, rest} -> String.downcase(first) <> rest
+    end
   end
 
   defp escape_parameter_name(name) when is_binary(name) do

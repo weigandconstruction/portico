@@ -150,6 +150,14 @@ defmodule Portico.GeneratedCodeTest do
       })
     end
 
+    test "a path parameter the spec forgot to mark required", %{dir: dir} do
+      params = [param("id", "path")]
+      root = generate!(dir, %{"/things/{id}" => %{"get" => op(%{"parameters" => params})}})
+
+      assert {:ok, %{url: "https://api.test/things/7"}} =
+               call(root, Things, :get_things_id, ["7"])
+    end
+
     test "a spec without an info version", %{dir: dir} do
       generate!(dir, %{"/things" => %{"get" => op()}}, %{"title" => "Test"})
     end
@@ -170,6 +178,109 @@ defmodule Portico.GeneratedCodeTest do
       doc = doc!(dir, Module.concat(root, Things), :get_things)
       assert doc =~ description
       assert doc =~ ~S(Matches #{name} or """)
+    end
+
+    test "in parameter names that aren't identifiers is sent under the original name", %{
+      dir: dir
+    } do
+      params = [
+        param("page size", "query", %{"required" => true}),
+        param("filter:name", "query"),
+        param("sort+", "query"),
+        param("2fa", "query"),
+        param(~S(X-"Quoted"), "header", %{"required" => true})
+      ]
+
+      root = generate!(dir, %{"/things" => %{"get" => op(%{"parameters" => params})}})
+
+      {:ok, sent} =
+        call(root, Things, :get_things, ["10", "v", [filter_name: "a", sort_: "b", n2fa: "c"]])
+
+      assert URI.decode_query(URI.parse(sent.url).query) == %{
+               "page size" => "10",
+               "filter:name" => "a",
+               "sort+" => "b",
+               "2fa" => "c"
+             }
+
+      assert sent.headers[~S(x-"quoted")] == ["v"]
+    end
+
+    test "in parameter names ending in ? or ! keeps them apart from ones ending in _", %{
+      dir: dir
+    } do
+      params = [
+        param("enabled?", "query", %{"required" => true}),
+        param("enabled_", "query", %{"required" => true}),
+        param("force!", "query"),
+        param("force_", "query")
+      ]
+
+      root = generate!(dir, %{"/things" => %{"get" => op(%{"parameters" => params})}})
+
+      {:ok, sent} = call(root, Things, :get_things, ["yes", "no", [force!: "a", force_: "b"]])
+
+      assert URI.decode_query(URI.parse(sent.url).query) == %{
+               "enabled?" => "yes",
+               "enabled_" => "no",
+               "force!" => "a",
+               "force_" => "b"
+             }
+    end
+
+    test "in paths that aren't identifiers still gives valid function and module names", %{
+      dir: dir
+    } do
+      root =
+        generate!(dir, %{
+          "/a+b" => %{"get" => op()},
+          ~S(/c#{d}\e) => %{"get" => op()},
+          "/" => %{"get" => %{"responses" => %{"200" => %{"description" => "OK"}}}},
+          "/2fa/setup" => %{"get" => %{"responses" => %{"200" => %{"description" => "OK"}}}}
+        })
+
+      assert {:ok, %{url: "https://api.test/a+b"}} = call(root, Things, :get_a_b, [])
+      assert {:ok, %{url: "https://api.test/"}} = call(root, Root, :get_, [])
+      assert {:ok, _} = call(root, N2faSetup, :get_2fa_setup, [])
+      assert Module.concat(root, Things).__info__(:functions)[:get_c_d_e] == 1
+    end
+
+    test "in paths that only differ by - and _ gives each its own function", %{dir: dir} do
+      root =
+        generate!(dir, %{
+          "/time_off/requests" => %{"get" => op(%{"parameters" => [param("page", "query")]})},
+          "/time-off/requests" => %{"get" => op(%{"parameters" => [param("page", "query")]})}
+        })
+
+      assert {:ok, %{url: "https://api.test/time_off/requests"}} =
+               call(root, Things, :get_time_off_requests, [])
+
+      assert {:ok, %{url: "https://api.test/time-off/requests"}} =
+               call(root, Things, :get_time_off_requests_2, [])
+    end
+
+    test "in a path whose name looks like a suffix keeps it from a colliding path", %{dir: dir} do
+      required = [param("page", "query", %{"required" => true})]
+
+      root =
+        generate!(dir, %{
+          "/time_off" => %{"get" => op()},
+          "/time-off" => %{"get" => op(%{"parameters" => required})},
+          "/time_off_2" => %{"get" => op(%{"parameters" => required})}
+        })
+
+      functions = Module.concat(root, Things).__info__(:functions)
+      assert functions[:get_time_off] == 1
+      assert functions[:get_time_off_2] == 2
+      assert functions[:get_time_off_3] == 2
+
+      assert {:ok, %{url: "https://api.test/time_off"}} = call(root, Things, :get_time_off, [])
+
+      assert {:ok, %{url: "https://api.test/time_off_2?page=1"}} =
+               call(root, Things, :get_time_off_2, ["1"])
+
+      assert {:ok, %{url: "https://api.test/time-off?page=1"}} =
+               call(root, Things, :get_time_off_3, ["1"])
     end
 
     test "with quotes in a path is sent as-is", %{dir: dir} do
