@@ -206,6 +206,28 @@ defmodule Portico.GeneratedCodeTest do
       assert sent.headers[~S(x-"quoted")] == ["v"]
     end
 
+    test "in parameter names ending in ? or ! keeps them apart from ones ending in _", %{
+      dir: dir
+    } do
+      params = [
+        param("enabled?", "query", %{"required" => true}),
+        param("enabled_", "query", %{"required" => true}),
+        param("force!", "query"),
+        param("force_", "query")
+      ]
+
+      root = generate!(dir, %{"/things" => %{"get" => op(%{"parameters" => params})}})
+
+      {:ok, sent} = call(root, Things, :get_things, ["yes", "no", [force!: "a", force_: "b"]])
+
+      assert URI.decode_query(URI.parse(sent.url).query) == %{
+               "enabled?" => "yes",
+               "enabled_" => "no",
+               "force!" => "a",
+               "force_" => "b"
+             }
+    end
+
     test "in paths that aren't identifiers still gives valid function and module names", %{
       dir: dir
     } do

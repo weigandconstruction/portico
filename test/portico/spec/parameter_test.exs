@@ -19,7 +19,12 @@ defmodule Portico.Spec.ParameterTest do
             {"größe", "größe"},
             {"Ärger", "ärger"},
             {"_private", "_private"},
-            {"+", "param"}
+            {"+", "param"},
+            {"enabled?", "enabled?"},
+            {"force!", "force!"},
+            {"a?b", "a_b"},
+            {"x??", "x_?"},
+            {"2fa?", "n2fa?"}
           ] do
         assert Parameter.parse(%{"name" => name, "in" => "query"}).internal_name == expected,
                "#{name} should normalize to #{expected}"

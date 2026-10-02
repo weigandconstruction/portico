@@ -28,7 +28,8 @@ defmodule Portico.Spec.Parameter do
   - `<` → `_lt` (less than)
   - `>` → `_gt` (greater than)
   - `=` → `_eq` (equal)
-  - Anything else that can't appear in a variable name → `_`
+  - Anything else that can't appear in a variable name → `_`, except one
+    terminal `?` or `!`, which is kept
   - Leading `_` left over from the above is trimmed (unless the name started with one)
   - A leading digit gets an `n` prefix, and an uppercase first letter is lowercased
   - Reserved Elixir keywords get `_` suffix
@@ -142,7 +143,15 @@ defmodule Portico.Spec.Parameter do
     |> escape_parameter_name()
   end
 
+  # Elixir variables may end in one `?` or `!`, so a terminal one is kept
   defp to_identifier(name, original) do
+    case Regex.run(~r/\A(.*)([?!])\z/su, name) do
+      [_, base, mark] -> to_base_identifier(base, original) <> mark
+      nil -> to_base_identifier(name, original)
+    end
+  end
+
+  defp to_base_identifier(name, original) do
     name = String.replace(name, ~r/[^\p{L}\p{N}_]+/u, "_")
 
     name =
