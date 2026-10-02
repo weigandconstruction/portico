@@ -69,6 +69,11 @@ defmodule Portico.GeneratedCodeTest do
     end
   end
 
+  defp body_paths(content_types) do
+    content = Map.new(content_types, &{&1, %{"schema" => %{"type" => "object"}}})
+    %{"/things" => %{"post" => op(%{"requestBody" => %{"content" => content}})}}
+  end
+
   # The compiled @doc text of a generated function
   defp doc!(dir, module, function) do
     beam = Path.join([dir, "ebin", "#{module}.beam"])
@@ -313,6 +318,59 @@ defmodule Portico.GeneratedCodeTest do
       assert sent.url == "https://api.test/things/42?filter=active&limit=5"
       assert sent.headers["x-request-id"] == ["req-1"]
       refute Map.has_key?(sent.headers, "x-trace")
+    end
+
+    test "a form body when that's the only content type", %{dir: dir} do
+      root = generate!(dir, body_paths(["application/x-www-form-urlencoded"]))
+      {:ok, sent} = call(root, Things, :post_things, [%{name: "a b", size: 1}])
+
+      assert sent.headers["content-type"] == ["application/x-www-form-urlencoded"]
+      assert URI.decode_query(sent.body) == %{"name" => "a b", "size" => "1"}
+    end
+
+    test "a multipart body", %{dir: dir} do
+      root = generate!(dir, body_paths(["multipart/form-data"]))
+      {:ok, sent} = call(root, Things, :post_things, [[name: "a"]])
+
+      assert ["multipart/form-data; boundary=" <> _] = sent.headers["content-type"]
+      assert sent.body =~ ~s(name="name")
+    end
+
+    test "boolean and float multipart fields as strings", %{dir: dir} do
+      root = generate!(dir, body_paths(["multipart/form-data"]))
+
+      {:ok, sent} =
+        call(root, Things, :post_things, [
+          %{active: true, hidden: false, ratio: 1.5, label: {0.25, content_type: "text/plain"}}
+        ])
+
+      assert sent.body =~ ~s(name="active"\r\n\r\ntrue\r\n)
+      assert sent.body =~ ~s(name="hidden"\r\n\r\nfalse\r\n)
+      assert sent.body =~ ~s(name="ratio"\r\n\r\n1.5\r\n)
+      assert sent.body =~ ~s(content-type: text/plain\r\n\r\n0.25\r\n)
+    end
+
+    test "a raw body with the declared content type", %{dir: dir} do
+      root = generate!(dir, body_paths(["application/octet-stream"]))
+      {:ok, sent} = call(root, Things, :post_things, [<<1, 2, 3>>])
+
+      assert sent.headers["content-type"] == ["application/octet-stream"]
+      assert sent.body == <<1, 2, 3>>
+    end
+
+    test "JSON with a +json content type keeps that content type", %{dir: dir} do
+      root = generate!(dir, body_paths(["application/vnd.api+json"]))
+      {:ok, sent} = call(root, Things, :post_things, [%{data: 1}])
+
+      assert sent.headers["content-type"] == ["application/vnd.api+json"]
+      assert Jason.decode!(sent.body) == %{"data" => 1}
+    end
+
+    test "JSON when the spec offers JSON alongside other types", %{dir: dir} do
+      root = generate!(dir, body_paths(["multipart/form-data", "application/json"]))
+      {:ok, sent} = call(root, Things, :post_things, [%{name: "a"}])
+
+      assert sent.headers["content-type"] == ["application/json"]
     end
 
     test "a JSON request body", %{dir: dir} do

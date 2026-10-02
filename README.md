@@ -53,13 +53,14 @@ Portico is continuously tested against:
 
 ## 🛠 Installation
 
-Add `portico` to your list of dependencies in `mix.exs`:
+Add `portico` to your list of dependencies in `mix.exs`. Generated clients use
+`Req` at runtime and need Req 0.6.1 or newer (0.7.0 and 0.7.1 are not supported):
 
 ```elixir
 def deps do
   [
     {:portico, github: "weigandconstruction/portico", only: :dev},
-    {:req, "~> 0.5"}
+    {:req, "~> 0.6.1 or ~> 0.7.2"}
   ]
 end
 ```

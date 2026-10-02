@@ -2,6 +2,8 @@ defmodule <%= @module %>.Client do
   @moduledoc """
   HTTP client for <%= @module %> API.
 
+  Requires Req 0.6.1 or newer (0.7.0 and 0.7.1 are not supported).
+
   ## Generation details
 
   * Spec: <%= Portico.Helpers.escape_doc(@spec) %>
@@ -222,10 +224,23 @@ defmodule <%= @module %>.Client do
         {:params, params} when is_list(params) ->
           {:params, Enum.reject(params, fn {_k, v} -> is_nil(v) end)}
 
+        {:form_multipart, fields} ->
+          {:form_multipart, Enum.map(fields, &multipart_field/1)}
+
         other ->
           other
       end)
 
     Req.merge(client, cleaned_options)
   end
+
+  # Req only encodes integers, binaries, iodata, and streams as multipart
+  # values, so send booleans and floats as their string form
+  defp multipart_field({name, {value, options}}) when is_list(options),
+    do: {name, {multipart_value(value), options}}
+
+  defp multipart_field({name, value}), do: {name, multipart_value(value)}
+
+  defp multipart_value(value) when is_boolean(value) or is_float(value), do: to_string(value)
+  defp multipart_value(value), do: value
 end

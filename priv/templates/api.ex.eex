@@ -31,8 +31,11 @@ end) |> Enum.join("\n") |> Portico.Helpers.escape_doc() %>
         method: :<%= operation.method %>,
         url: "<%= Portico.Helpers.interpolated_path_with_params(path.path, Portico.Helpers.function_parameters(path, operation)) %>",
 
-        <%= if !Enum.empty?(Portico.Helpers.header_parameters(path, operation)) do %>
+        <%= if !Enum.empty?(Portico.Helpers.header_parameters(path, operation)) or Portico.Helpers.request_body_content_type_header(operation) do %>
           headers: [
+          <%= if content_type = Portico.Helpers.request_body_content_type_header(operation) do %>
+            {"content-type", <%= inspect(content_type) %>},
+          <% end %>
           <%= for param <-  Portico.Helpers.header_parameters(path, operation) do %>
             <%= if param.required do %>
             {<%= inspect(param.name) %>, <%= param.internal_name %>},
@@ -56,7 +59,7 @@ end) |> Enum.join("\n") |> Portico.Helpers.escape_doc() %>
         <% end %>
 
         <%= if Portico.Helpers.has_request_body?(operation) do %>
-          json: body,
+          <%= Portico.Helpers.request_body_option(operation) %>: body,
         <% end %>
       )
     end

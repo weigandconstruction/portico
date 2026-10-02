@@ -336,6 +336,96 @@ defmodule Portico.Helpers do
   end
 
   @doc """
+  The content type an operation's request body is sent as. When the spec
+  declares several, JSON wins, then form, then multipart, then anything else.
+
+  ## Examples:
+
+      iex> content = %{"multipart/form-data" => %{}, "application/json" => %{}}
+      iex> Portico.Helpers.request_body_content_type(%Portico.Spec.Operation{request_body: %{"content" => content}})
+      "application/json"
+
+      iex> Portico.Helpers.request_body_content_type(%Portico.Spec.Operation{request_body: nil})
+      nil
+
+  """
+  @spec request_body_content_type(Operation.t()) :: String.t() | nil
+  def request_body_content_type(%Operation{request_body: %{"content" => content}})
+      when is_map(content) and map_size(content) > 0 do
+    content
+    |> Map.keys()
+    |> Enum.min_by(&{body_option_rank(body_option_for(&1)), &1})
+  end
+
+  def request_body_content_type(%Operation{}), do: nil
+
+  @doc """
+  The Req option that sends an operation's request body in its content type:
+  `:json`, `:form`, `:form_multipart`, or `:body` for anything else. Defaults
+  to `:json` when the spec doesn't say.
+
+  ## Examples:
+
+      iex> content = %{"application/x-www-form-urlencoded" => %{}}
+      iex> Portico.Helpers.request_body_option(%Portico.Spec.Operation{request_body: %{"content" => content}})
+      :form
+
+  """
+  @spec request_body_option(Operation.t()) :: :json | :form | :form_multipart | :body
+  def request_body_option(%Operation{} = operation) do
+    case request_body_content_type(operation) do
+      nil -> :json
+      type -> body_option_for(type)
+    end
+  end
+
+  @doc """
+  The content-type header to send with a request body, when the Req option
+  doesn't set the right one itself (e.g. `application/vnd.api+json`, or any
+  type sent as a raw `:body`).
+
+  ## Examples:
+
+      iex> content = %{"application/octet-stream" => %{}}
+      iex> Portico.Helpers.request_body_content_type_header(%Portico.Spec.Operation{request_body: %{"content" => content}})
+      "application/octet-stream"
+
+      iex> content = %{"application/json" => %{}}
+      iex> Portico.Helpers.request_body_content_type_header(%Portico.Spec.Operation{request_body: %{"content" => content}})
+      nil
+
+  """
+  @spec request_body_content_type_header(Operation.t()) :: String.t() | nil
+  def request_body_content_type_header(%Operation{} = operation) do
+    type = request_body_content_type(operation)
+
+    case request_body_option(operation) do
+      :json -> if media_type(type) in [nil, "application/json", "*/*"], do: nil, else: type
+      :body -> type
+      _form -> nil
+    end
+  end
+
+  defp body_option_for(type) do
+    media = media_type(type)
+
+    cond do
+      media in ["application/json", "*/*"] or String.ends_with?(media, "+json") -> :json
+      media == "application/x-www-form-urlencoded" -> :form
+      media == "multipart/form-data" -> :form_multipart
+      true -> :body
+    end
+  end
+
+  defp body_option_rank(option),
+    do: Enum.find_index([:json, :form, :form_multipart, :body], &(&1 == option))
+
+  defp media_type(nil), do: nil
+
+  defp media_type(type),
+    do: type |> String.split(";") |> hd() |> String.trim() |> String.downcase()
+
+  @doc """
   Extracts body parameters from an operation's request body schema.
   Returns a list of parameter maps with name, type, description, and required status.
   Required parameters are sorted to the top.
@@ -353,8 +443,7 @@ defmodule Portico.Helpers do
     case operation.request_body do
       %{"content" => content} when is_map(content) ->
         content
-        |> Map.values()
-        |> List.first()
+        |> Map.get(request_body_content_type(operation))
         |> case do
           %{"schema" => schema} -> extract_schema_parameters(schema)
           _ -> []
@@ -411,7 +500,7 @@ defmodule Portico.Helpers do
         [
           %{
             name: "body",
-            type: "object",
+            type: if(request_body_option(operation) == :body, do: "binary", else: "object"),
             description: "Request body parameters",
             required: true,
             nested_params: body_params
@@ -638,7 +727,7 @@ defmodule Portico.Helpers do
     # Add body parameter if present
     param_types =
       if has_body do
-        param_types ++ ["map()"]
+        param_types ++ [body_typespec(operation)]
       else
         param_types
       end
@@ -653,5 +742,13 @@ defmodule Portico.Helpers do
 
     param_list = Enum.join(param_types, ", ")
     "@spec #{function_name}(#{param_list}) :: {:ok, any()} | {:error, Exception.t()}"
+  end
+
+  defp body_typespec(operation) do
+    case request_body_option(operation) do
+      :json -> "map()"
+      :body -> "iodata()"
+      _form -> "map() | keyword()"
+    end
   end
 end
