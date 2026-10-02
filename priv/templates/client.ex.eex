@@ -160,7 +160,10 @@ defmodule <%= @module %>.Client do
   instead, for example to read pagination headers, create the client with
   `return: :response`:
 
-      client = <%= @module %>.Client.new(return: :response)
+      client = <%= @module %>.Client.new(
+        base_url: "https://api.example.com",
+        return: :response
+      )
       {:ok, %Req.Response{headers: headers, body: body}} = <%= @module %>.Client.request(client, url: "/endpoint")
 
   ## Application Configuration
