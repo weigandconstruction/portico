@@ -18,7 +18,7 @@ defmodule Portico do
 
   ## Supported Formats
 
-  - Remote HTTPS URLs returning JSON or YAML
+  - Remote HTTP(S) URLs returning JSON or YAML
   - Local JSON files (.json)
   - Local YAML files (.yaml, .yml)
 
@@ -38,7 +38,7 @@ defmodule Portico do
 
   ## Parameters
 
-  - `source` - Either an HTTPS URL string or a local file path
+  - `source` - Either an HTTP(S) URL string or a local file path
 
   ## Returns
 
@@ -60,16 +60,15 @@ defmodule Portico do
   - `Jason.DecodeError` if JSON is malformed
   - `YamlElixir.ParsingError` if YAML is malformed
   - `Req` exceptions for network issues
+  - `RuntimeError` if a URL doesn't return a 2xx status
   - `File.Error` if local file doesn't exist
+  - `RuntimeError` if the content isn't an OpenAPI 3 spec
 
   """
   def parse!(nil), do: raise("You must provide a spec URL or file path")
 
-  def parse!("https://" <> _ = url) do
-    url
-    |> Portico.Fetch.fetch()
-    |> do_parse!()
-  end
+  def parse!("https://" <> _ = url), do: url |> Portico.Fetch.fetch() |> do_parse!()
+  def parse!("http://" <> _ = url), do: url |> Portico.Fetch.fetch() |> do_parse!()
 
   def parse!(path) do
     {File.read!(path), path_to_content_type(path)}
@@ -79,6 +78,7 @@ defmodule Portico do
   defp do_parse!(content) do
     content
     |> parse_content()
+    |> validate_openapi!()
     |> Portico.Spec.Resolver.resolve()
     |> Portico.Spec.parse()
   end
@@ -90,6 +90,28 @@ defmodule Portico do
       ".yml" -> :yaml
       _ -> raise("Unsupported file extension: #{Path.extname(path)}")
     end
+  end
+
+  # Plain text like "404: Not Found" is valid YAML, so check the shape before
+  # resolving refs rather than failing somewhere confusing later
+  defp validate_openapi!(%{"openapi" => "3." <> _, "paths" => paths} = spec) when is_map(paths),
+    do: spec
+
+  defp validate_openapi!(%{"swagger" => version}) do
+    raise "Swagger #{version} specs aren't supported. Convert the spec to OpenAPI 3 first."
+  end
+
+  defp validate_openapi!(%{"openapi" => "3." <> _}) do
+    raise "The spec has no paths"
+  end
+
+  defp validate_openapi!(%{"openapi" => version}) do
+    raise "Only OpenAPI 3 specs are supported, got version #{inspect(version)}"
+  end
+
+  defp validate_openapi!(content) do
+    raise "This doesn't look like an OpenAPI spec (no \"openapi\" field). It starts with: " <>
+            (content |> inspect() |> String.slice(0, 80))
   end
 
   defp parse_content({content, :json}), do: Jason.decode!(content)

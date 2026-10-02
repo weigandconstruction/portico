@@ -12,10 +12,17 @@ defmodule Portico.Fetch do
   Fetches content from a URL and returns the body with detected content type.
 
   Returns `{content, content_type}` where content_type is `:json`, `:yaml`, or `:unknown`.
+  Raises if the server doesn't respond with a 2xx status. `req_options` are
+  passed to `Req.get!/2`.
   """
-  @spec fetch(String.t()) :: {String.t(), content_type()}
-  def fetch(url) do
-    response = Req.get!(url, decode_body: false)
+  @spec fetch(String.t(), keyword()) :: {String.t(), content_type()}
+  def fetch(url, req_options \\ []) do
+    response = Req.get!(url, [decode_body: false] ++ req_options)
+
+    unless response.status in 200..299 do
+      raise "Could not fetch the spec from #{url}: HTTP #{response.status}"
+    end
+
     content_type = detect_content_type(response)
     {response.body, content_type}
   end
