@@ -237,6 +237,30 @@ defmodule Portico.GeneratedCodeTest do
                call(root, Things, :get_time_off_requests_2, [])
     end
 
+    test "in a path whose name looks like a suffix keeps it from a colliding path", %{dir: dir} do
+      required = [param("page", "query", %{"required" => true})]
+
+      root =
+        generate!(dir, %{
+          "/time_off" => %{"get" => op()},
+          "/time-off" => %{"get" => op(%{"parameters" => required})},
+          "/time_off_2" => %{"get" => op(%{"parameters" => required})}
+        })
+
+      functions = Module.concat(root, Things).__info__(:functions)
+      assert functions[:get_time_off] == 1
+      assert functions[:get_time_off_2] == 2
+      assert functions[:get_time_off_3] == 2
+
+      assert {:ok, %{url: "https://api.test/time_off"}} = call(root, Things, :get_time_off, [])
+
+      assert {:ok, %{url: "https://api.test/time_off_2?page=1"}} =
+               call(root, Things, :get_time_off_2, ["1"])
+
+      assert {:ok, %{url: "https://api.test/time-off?page=1"}} =
+               call(root, Things, :get_time_off_3, ["1"])
+    end
+
     test "with quotes in a path is sent as-is", %{dir: dir} do
       params = [param("id", "path", %{"required" => true})]
 
