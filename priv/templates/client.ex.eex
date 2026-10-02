@@ -1,6 +1,13 @@
 defmodule <%= @module %>.Client do
-  @moduledoc """
+  @moduledoc ~S"""
   HTTP client for <%= @module %> API.
+
+  ## Generation details
+
+  * Spec: <%= @spec %>
+<%= if @spec_info["version"] do %>  * Spec version: <%= @spec_info["version"] %>
+<% end %>  * Portico: <%= @portico_ref %>
+  * Generated on: <%= @generated_on %>
   """
 
   defmodule HTTPError do

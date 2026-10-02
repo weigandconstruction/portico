@@ -129,6 +129,44 @@ defmodule Mix.Tasks.Portico.GenerateTest do
       end)
     end
 
+    test "records generation details in the client moduledoc only", %{
+      temp_dir: temp_dir,
+      spec_file: spec_file
+    } do
+      File.cd!(temp_dir, fn ->
+        capture_io(fn ->
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+        end)
+
+        client = File.read!("lib/test_api/client.ex")
+        assert client =~ "@moduledoc ~S\"\"\""
+        assert client =~ "  * Spec: #{spec_file}\n"
+        assert client =~ "  * Spec version: 1.0.0\n"
+        assert client =~ "  * Portico: #{Application.spec(:portico, :vsn)}\n"
+        assert client =~ "  * Generated on: #{Date.utc_today()}\n"
+
+        api = File.read!("lib/test_api/api/user_management.ex")
+        assert api =~ "See `TestAPI.Client` for generation details."
+        refute api =~ "Generated on"
+      end)
+    end
+
+    test "omits spec version when the spec has none", %{temp_dir: temp_dir} do
+      spec = put_in(@test_spec_json, ["info"], %{"title" => "Test API"})
+      spec_file = Path.join(temp_dir, "no_version.json")
+      File.write!(spec_file, Jason.encode!(spec))
+
+      File.cd!(temp_dir, fn ->
+        capture_io(fn ->
+          Mix.Tasks.Portico.Generate.run(["--module", "TestAPI", "--spec", spec_file])
+        end)
+
+        client = File.read!("lib/test_api/client.ex")
+        refute client =~ "Spec version"
+        assert client =~ "  * Spec: #{spec_file}\n  * Portico: "
+      end)
+    end
+
     test "creates API modules grouped by tags", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         capture_io(fn ->
