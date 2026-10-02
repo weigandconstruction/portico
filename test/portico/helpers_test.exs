@@ -484,10 +484,10 @@ defmodule Portico.HelpersTest do
       assert result == "integer()"
     end
 
-    test "converts number schema to float()" do
+    test "converts number schema to number()" do
       schema = %{"type" => "number"}
       result = Helpers.schema_to_typespec(schema)
-      assert result == "float()"
+      assert result == "number()"
     end
 
     test "converts boolean schema to boolean()" do
@@ -745,6 +745,34 @@ defmodule Portico.HelpersTest do
 
     test "returns an empty string for nil" do
       assert Helpers.escape_doc(nil) == ""
+    end
+  end
+
+  describe "function_parameters/2 overrides" do
+    test "an operation-level param replaces the path-level one in place" do
+      path = %SpecPath{
+        parameters: [
+          %Portico.Spec.Parameter{
+            name: "id",
+            internal_name: "id",
+            in: "path",
+            description: "path"
+          },
+          %Portico.Spec.Parameter{name: "q", internal_name: "q", in: "query", description: "path"}
+        ]
+      }
+
+      operation = %Operation{
+        method: "get",
+        parameters: [
+          %Portico.Spec.Parameter{name: "limit", internal_name: "limit", in: "query"},
+          %Portico.Spec.Parameter{name: "q", internal_name: "q", in: "query", description: "op"}
+        ]
+      }
+
+      params = Helpers.function_parameters(path, operation)
+      assert Enum.map(params, & &1.name) == ["id", "q", "limit"]
+      assert Enum.find(params, &(&1.name == "q")).description == "op"
     end
   end
 end

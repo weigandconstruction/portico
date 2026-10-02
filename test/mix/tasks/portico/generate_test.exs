@@ -543,6 +543,32 @@ defmodule Mix.Tasks.Portico.GenerateTest do
   end
 
   describe "tag filtering" do
+    test "warns about configured tags that aren't in the spec", %{
+      temp_dir: temp_dir,
+      spec_file: spec_file
+    } do
+      config_file = Path.join(temp_dir, "config.json")
+
+      File.write!(
+        config_file,
+        Jason.encode!(%{
+          "spec_info" => %{"source" => spec_file, "module" => "TestAPI"},
+          "tags" => ["user-management", "Renamed/tag"]
+        })
+      )
+
+      output =
+        capture_io(:stderr, fn ->
+          File.cd!(temp_dir, fn ->
+            capture_io(fn -> Mix.Tasks.Portico.Generate.run(["--config", config_file]) end)
+          end)
+        end)
+
+      assert output =~ "These tags aren't in the spec"
+      assert output =~ "* Renamed/tag"
+      refute output =~ "* user-management"
+    end
+
     test "filters multi-tag operations by any of their tags", %{temp_dir: temp_dir} do
       spec_with_multiple_tags = %{
         "openapi" => "3.0.0",
