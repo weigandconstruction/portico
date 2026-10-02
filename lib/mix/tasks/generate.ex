@@ -222,9 +222,14 @@ defmodule Mix.Tasks.Portico.Generate do
   # against the file on disk. With copy_template's format_elixir option it
   # compared unformatted output, so unchanged files always prompted, and
   # format_elixir doesn't exist before Elixir 1.18.
+  #
+  # create_file skips that comparison when forced, so only force files whose
+  # contents changed; identical files are then left untouched.
   defp write_template(source, target, opts) do
     contents = source |> EEx.eval_file(assigns: opts) |> Code.format_string!()
-    create_file(target, [contents, ?\n], generator_opts(opts))
+    contents = IO.iodata_to_binary([contents, ?\n])
+    force = opts[:force] == true and File.read(target) != {:ok, contents}
+    create_file(target, contents, Keyword.put(generator_opts(opts), :force, force))
   end
 
   defp parse_tag_filters(opts) do

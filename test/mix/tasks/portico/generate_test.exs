@@ -300,6 +300,23 @@ defmodule Mix.Tasks.Portico.GenerateTest do
       end)
     end
 
+    test "--force leaves an unchanged file untouched", %{
+      temp_dir: temp_dir,
+      spec_file: spec_file
+    } do
+      File.cd!(temp_dir, fn ->
+        args = ["--module", "TestAPI", "--spec", spec_file]
+        Mix.Tasks.Portico.Generate.run(args)
+        old_mtime = {{2000, 1, 1}, {0, 0, 0}}
+        File.touch!("lib/test_api/client.ex", old_mtime)
+
+        Mix.Tasks.Portico.Generate.run(args ++ ["--force"])
+
+        assert File.stat!("lib/test_api/client.ex").mtime == old_mtime
+        refute_received {:mix_shell, :yes?, _}
+      end)
+    end
+
     test "without --force a changed file prompts", %{temp_dir: temp_dir, spec_file: spec_file} do
       File.cd!(temp_dir, fn ->
         args = ["--module", "TestAPI", "--spec", spec_file]
